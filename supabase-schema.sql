@@ -101,6 +101,17 @@ create table if not exists attendance (
   created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
+-- VIOLATIONS TABLE
+create table if not exists violations (
+  id text primary key,
+  "candidateId" text not null,
+  "examId" text not null,
+  type text not null,
+  description text,
+  timestamp timestamp with time zone not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
 -- SETTINGS TABLE
 create table if not exists settings (
   id integer primary key default 1,
@@ -145,6 +156,9 @@ create policy "Allow public access to results" on results for all using (true);
 
 alter table attendance enable row level security;
 create policy "Allow public access to attendance" on attendance for all using (true);
+
+alter table violations enable row level security;
+create policy "Allow public access to violations" on violations for all using (true);
 
 alter table settings enable row level security;
 create policy "Allow public access to settings" on settings for all using (true);

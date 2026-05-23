@@ -1,4 +1,4 @@
-import { User, Question, Exam, ExamSession, Result, Subject, AttendanceRecord } from '../types';
+import { User, Question, Exam, ExamSession, Result, Subject, AttendanceRecord, Violation } from '../types';
 import { supabase } from './supabase';
 
 const DB_KEY = 'abu_nasir_db';
@@ -11,13 +11,13 @@ interface Settings {
   address: string;
   defaultExamDuration: number;
   autoSubmit: boolean;
-  antiCheatingSensitivity: string;
   passMark: number;
   darkMode: boolean;
   websiteLogo?: string;
   favicon?: string;
   dashboardLogo?: string;
   loginBackground?: string;
+  antiCheatingEnabled?: boolean;
 }
 
 interface DBState {
@@ -28,6 +28,7 @@ interface DBState {
   sessions: ExamSession[];
   results: Result[];
   attendance: AttendanceRecord[];
+  violations: Violation[];
   settings?: Settings;
 }
 
@@ -39,10 +40,11 @@ const defaultSettings: Settings = {
   address: '123 Academy Way',
   defaultExamDuration: 60,
   autoSubmit: true,
-  antiCheatingSensitivity: 'medium',
   passMark: 50,
-  darkMode: false
+  darkMode: false,
+  antiCheatingEnabled: true,
 };
+
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -73,6 +75,7 @@ const defaultDB: DBState = {
   sessions: [],
   results: [],
   attendance: [],
+  violations: [],
   settings: defaultSettings
 };
 
@@ -103,7 +106,7 @@ const syncFromSupabase = async () => {
    if (isSynced) return;
    isSynced = true;
    try {
-     const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes] = await Promise.all([
+     const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes, violationsRes] = await Promise.all([
        supabase.from('users').select('*'),
        supabase.from('subjects').select('*'),
        supabase.from('questions').select('*'),
@@ -111,7 +114,8 @@ const syncFromSupabase = async () => {
        supabase.from('exam_sessions').select('*'),
        supabase.from('results').select('*'),
        supabase.from('attendance').select('*'),
-       supabase.from('settings').select('*').eq('id', 1).single()
+       supabase.from('settings').select('*').eq('id', 1).single(),
+       supabase.from('violations').select('*')
      ]);
 
      if (usersRes.data) localState.users = usersRes.data;
@@ -121,6 +125,7 @@ const syncFromSupabase = async () => {
      if (sessionsRes.data) localState.sessions = sessionsRes.data;
      if (resultsRes.data) localState.results = resultsRes.data;
      if (attRes.data) localState.attendance = attRes.data;
+     if (violationsRes.data) localState.violations = violationsRes.data;
      if (settingsRes.data) localState.settings = { ...defaultSettings, ...settingsRes.data };
 
      notify();
@@ -151,7 +156,7 @@ const syncFromSupabase = async () => {
          notify();
      };
 
-     ['users', 'subjects', 'questions', 'exams', 'exam_sessions', 'results', 'attendance', 'settings'].forEach(table => {
+     ['users', 'subjects', 'questions', 'exams', 'exam_sessions', 'results', 'attendance', 'settings', 'violations'].forEach(table => {
          channel.on('postgres_changes', { event: '*', schema: 'public', table }, (p) => handleRt(table, p));
      });
      channel.subscribe();
@@ -355,6 +360,14 @@ export const db = {
     console.log("Mass clearing is disabled in production.");
   },
   
+  getViolations() { return localState.violations || []; },
+  saveViolation(v: Violation) {
+    if(!localState.violations) localState.violations = [];
+    localState.violations.unshift(v); 
+    notify();
+    supabase.from('violations').insert(v).then();
+  },
+
   getSettings() {
     return localState.settings || defaultSettings;
   },

@@ -84,3 +84,13 @@ export interface Result {
   remarks?: string;
   date: string;
 }
+
+export interface Violation {
+  id: string;
+  candidateId: string;
+  examId: string;
+  timestamp: string;
+  type: string;
+  description: string;
+}
+

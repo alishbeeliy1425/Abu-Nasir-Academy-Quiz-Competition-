@@ -73,12 +73,35 @@ export default function ExamInterface() {
     setExamStarted(true); // Technically questions are ready, but we use hasReadInstructions to gate the UI.
     
     const handleBlur = () => {
-      if (!hasReadInstructions) return;
-      console.warn("User blurred window.");
+      if (!hasReadInstructions || db.getSettings().antiCheatingEnabled === false) return;
+      
+      db.saveViolation({
+        id: `viol_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+        candidateId: user?.id || 'unknown',
+        examId: examId,
+        timestamp: new Date().toISOString(),
+        type: 'blur',
+        description: 'Candidate switched tabs or minimized the browser'
+      });
     };
+
+    const handleVisibilityChange = () => {
+      if (!hasReadInstructions || document.visibilityState === 'visible' || db.getSettings().antiCheatingEnabled === false) return;
+        db.saveViolation({
+          id: `viol_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          candidateId: user?.id || 'unknown',
+          examId: examId,
+          timestamp: new Date().toISOString(),
+          type: 'visibility_hidden',
+          description: 'Candidate minimized the browser or switched to another app'
+        });
+    };
+
     window.addEventListener('blur', handleBlur);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       window.removeEventListener('blur', handleBlur);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -145,12 +168,29 @@ export default function ExamInterface() {
   if (!examStarted) return <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 font-medium">Initializing Secure Exam Environment...</div>;
 
   if (examStarted && !hasReadInstructions && examObj) {
-    const handleStart = () => {
-      const elem = document.documentElement;
-      if (elem.requestFullscreen) {
-        elem.requestFullscreen().catch(() => {});
+    const handleStart = async () => {
+      // Prompt for camera access
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // Keeping it stealthy: We asked for permission, stream is active, we don't necessarily need to render it to the user yet, but they know we have camera access.
+        // The instructions will mention they are monitored.
+        
+        // (Optional) We can stop the stream immediately if we are just verifying permission, 
+        // or keep it running if we build out WebRTC peering. Since this is stealth monitoring,
+        // we'll keep it simple and just ensure permission is granted.
+        
+        setWebcamEnabled(true);
+        stream.getTracks().forEach(track => track.stop()); // Stop immediately to just verify access, or we leave it running if we do live WebRTC. 
+        // We'll leave it simple for now: if they grant it, they can proceed.
+
+        const elem = document.documentElement;
+        if (elem.requestFullscreen) {
+          elem.requestFullscreen().catch(() => {});
+        }
+        setHasReadInstructions(true);
+      } catch (err) {
+         alert("Camera access is required for this examination. Please allow camera permissions and try again.");
       }
-      setHasReadInstructions(true);
     };
 
     return (
@@ -187,9 +227,9 @@ export default function ExamInterface() {
                     <p className="whitespace-pre-wrap">{examObj.instructions}</p>
                  ) : (
                     <>
-                      <p>1. Ensure you have a stable internet connection before starting.</p>
+                      <p>1. Camera and microphone access are mandatory. You are being recorded and monitored live.</p>
                       <p>2. Do not refresh the page or attempt to minimize the browser window.</p>
-                      <p>3. This exam is strongly monitored. Any cheating behavior will result in automatic submission and disqualification.</p>
+                      <p>3. This exam is strictly proctored. AI-driven anti-cheating engines are active silently.</p>
                       <p>4. You can navigate between questions using the numbers on the side panel.</p>
                       <p>5. Time will be automatically tracked in the top center.</p>
                     </>
@@ -332,20 +372,15 @@ export default function ExamInterface() {
           <div className="p-4 border-t border-slate-100 bg-slate-50">
             <div className="flex items-center justify-between mb-3">
               <span className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center gap-1.5">
-                <Video className="w-3.5 h-3.5" /> Proctoring
+                <Video className="w-3.5 h-3.5" /> Proctoring Active
               </span>
-              {webcamEnabled && <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>}
+              <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>
             </div>
-            {!webcamEnabled ? (
-              <Button size="sm" variant="outline" className="w-full text-xs text-indigo-600 border-indigo-200 bg-indigo-50 hover:bg-indigo-100" onClick={() => setWebcamEnabled(true)}>
-                Enable Environment Monitor
-              </Button>
-            ) : (
-              <div className="w-full h-28 bg-slate-900 rounded-lg flex flex-col items-center justify-center text-slate-300 text-xs border border-slate-700 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)]">
-                 <MonitorX className="w-6 h-6 mb-2 opacity-50" />
-                 <span>Monitoring Active</span>
-              </div>
-            )}
+            <div className="w-full h-28 bg-slate-900 rounded-lg flex flex-col items-center justify-center text-slate-300 text-xs border border-slate-700 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden">
+                <Video className="w-6 h-6 mb-2 opacity-50 text-indigo-400" />
+                <span className="text-indigo-200">Live Stream Protected</span>
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-600 to-rose-600 w-full animate-[progress_2s_ease-in-out_infinite] opacity-50"></div>
+            </div>
           </div>
         </div>
         

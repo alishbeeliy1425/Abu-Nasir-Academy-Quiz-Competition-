@@ -309,16 +309,13 @@ export default function AdminSettings() {
                     />
                   </div>
                   <div className="space-y-1">
-                    <label className="text-sm font-medium text-slate-700">Anti-Cheating Sensitivity</label>
-                    <select 
-                      value={settings.antiCheatingSensitivity}
-                      onChange={e => setSettings({...settings, antiCheatingSensitivity: e.target.value})}
+                    <label className="text-sm font-medium text-slate-700">Pass Mark (%)</label>
+                    <input 
+                      type="number" 
+                      value={settings.passMark}
+                      onChange={e => setSettings({...settings, passMark: parseInt(e.target.value) || 50})}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
-                    >
-                      <option value="low">Low (Allow minor deviations)</option>
-                      <option value="medium">Medium (Warn on tab switch)</option>
-                      <option value="high">High (Auto-submit on tab switch)</option>
-                    </select>
+                    />
                   </div>
                   <div className="md:col-span-2 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <div>
