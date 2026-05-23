@@ -107,7 +107,7 @@ export default function Register() {
     const serialNumber = `ANA${currentYear}${candidateCount.toString().padStart(3, '0')}`;
 
     // Create user
-    state.users.push({
+    db.addUser({
       id: `std_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
       role: 'candidate',
       name: formData.name,
@@ -121,7 +121,6 @@ export default function Register() {
       country: formData.country,
       photoUrl: photoUrl
     });
-    db.save(state);
 
     setSuccess(true);
     

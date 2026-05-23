@@ -39,9 +39,7 @@ export default function AdminSettings() {
 
   const handleReset = () => {
     if (confirm('Reset to defaults?')) {
-      const state = db.get();
-      state.settings = undefined;
-      db.save(state);
+      db.resetSettings();
       setSettings(db.getSettings());
     }
   };

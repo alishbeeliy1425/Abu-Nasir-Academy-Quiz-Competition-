@@ -32,7 +32,7 @@ export default function PublishResults() {
         // Technically, our Result type might not have `isPublished`, but admin tools 
         // implies we can control it. Let's add it ad-hoc if not present.
         (res as any).isPublished = !currentStatus;
-        db.save(state);
+        db.saveResult(res);
         setResults(db.getResults());
       }
       setPublishingId(null);
@@ -40,17 +40,21 @@ export default function PublishResults() {
   };
 
   const publishAll = () => {
-    const state = db.get();
-    state.results.forEach(r => (r as any).isPublished = true);
-    db.save(state);
+    const results = db.getResults();
+    results.forEach(r => {
+      (r as any).isPublished = true;
+      db.saveResult(r);
+    });
     setResults(db.getResults());
     alert('All results published.');
   };
 
   const unpublishAll = () => {
-    const state = db.get();
-    state.results.forEach(r => (r as any).isPublished = false);
-    db.save(state);
+    const results = db.getResults();
+    results.forEach(r => {
+      (r as any).isPublished = false;
+      db.saveResult(r);
+    });
     setResults(db.getResults());
     alert('All results unpublished.');
   };

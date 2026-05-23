@@ -42,12 +42,12 @@ export default function AdminAttendanceReports() {
     if (confirm('Are you sure you want to populate with demo attendance data?')) {
       // Just inject some demo data for today and past days
       const state = db.get();
-      state.attendance = []; // clear first
+      db.clearAllAttendance();
       
       const testCandidate = state.users.find(u => u.role === 'candidate') || { id: 'student_1' };
       const todayDate = new Date().toISOString().split('T')[0];
       
-      state.attendance.push({
+      db.saveAttendance({
         id: 'att_demo_1',
         candidateId: testCandidate.id,
         date: todayDate,
@@ -55,7 +55,7 @@ export default function AdminAttendanceReports() {
         subjectOrExamId: 'general',
         timestamp: new Date().toISOString()
       });
-      state.attendance.push({
+      db.saveAttendance({
         id: 'att_demo_2',
         candidateId: testCandidate.id,
         date: todayDate,
@@ -64,7 +64,6 @@ export default function AdminAttendanceReports() {
         timestamp: new Date().toISOString()
       });
 
-      db.save(state);
       alert('Demo data restored.');
     }
   };
