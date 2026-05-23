@@ -1,0 +1,6 @@
+{
+  "name": "Abu Nasir Academy CBT Portal",
+  "description": "Professional computer-based testing portal similar to JAMB/WAEC with simulated live exams, auto-grading, and anti-cheat monitoring.",
+  "requestFramePermissions": ["camera"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
