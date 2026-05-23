@@ -141,7 +141,14 @@ export default function AdminQuestions() {
         });
         
         if (!response.ok) {
-          throw new Error(`Batch ${i+1}/${totalBatches} failed. ${response.statusText}`);
+          let errorDetails = response.statusText;
+          try {
+            const errData = await response.json();
+            if (errData.error) errorDetails = errData.error;
+          } catch (e) {
+            // ignore
+          }
+          throw new Error(`Batch ${i+1}/${totalBatches} failed. ${errorDetails}`);
         }
         
         const data = await response.json();

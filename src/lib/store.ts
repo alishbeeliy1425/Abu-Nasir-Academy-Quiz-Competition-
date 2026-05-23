@@ -1,8 +1,6 @@
 import { User, Question, Exam, ExamSession, Result, Subject, AttendanceRecord, Violation } from '../types';
 import { supabase } from './supabase';
 
-const DB_KEY = 'abu_nasir_db';
-
 interface Settings {
   websiteName: string;
   websiteDescription: string;
@@ -80,34 +78,24 @@ const defaultDB: DBState = {
   settings: defaultSettings
 };
 
-let localState: DBState = defaultDB;
-
-// Load from local storage initially for instant load
-const raw = localStorage.getItem(DB_KEY);
-if (raw) {
-  try {
-     const parsed = JSON.parse(raw);
-     localState = { ...defaultDB, ...parsed };
-  } catch(e) {}
-}
+let localState: DBState = { ...defaultDB };
 
 // Simple observable pattern for UI updates
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
 const notify = () => {
-    localStorage.setItem(DB_KEY, JSON.stringify(localState));
     listeners.forEach(l => l());
 };
 
 let isSynced = false;
 
 // Sync from supabase!
-const syncFromSupabase = async () => {
-   if (isSynced) return;
+export const syncFromSupabase = async (force = false) => {
+   if (isSynced && !force) return;
    isSynced = true;
    try {
-     const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes, violationsRes] = await Promise.all([
+     const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes, violationsRes, documentsRes] = await Promise.all([
        supabase.from('users').select('*'),
        supabase.from('subjects').select('*'),
        supabase.from('questions').select('*'),
@@ -116,51 +104,74 @@ const syncFromSupabase = async () => {
        supabase.from('results').select('*'),
        supabase.from('attendance').select('*'),
        supabase.from('settings').select('*').eq('id', 1).single(),
-       supabase.from('violations').select('*')
+       supabase.from('violations').select('*'),
+       supabase.from('documents').select('*')
      ]);
 
-     if (usersRes.data) localState.users = usersRes.data;
+     if (usersRes.error) console.error('fetch users error:', usersRes.error);
+     if (usersRes.data && usersRes.data.length > 0) localState.users = usersRes.data;
+     
+     if (subjectsRes.error) console.error('fetch subjects error:', subjectsRes.error);
      if (subjectsRes.data) localState.subjects = subjectsRes.data;
+     
+     if (questionsRes.error) console.error('fetch questions error:', questionsRes.error);
      if (questionsRes.data) localState.questions = questionsRes.data;
+     
+     if (examsRes.error) console.error('fetch exams error:', examsRes.error);
      if (examsRes.data) localState.exams = examsRes.data;
+     
+     if (sessionsRes.error) console.error('fetch sessions error:', sessionsRes.error);
      if (sessionsRes.data) localState.sessions = sessionsRes.data;
+     
+     if (resultsRes.error) console.error('fetch results error:', resultsRes.error);
      if (resultsRes.data) localState.results = resultsRes.data;
+     
+     if (attRes.error) console.error('fetch attendance error:', attRes.error);
      if (attRes.data) localState.attendance = attRes.data;
+     
+     if (violationsRes.error) console.error('fetch violations error:', violationsRes.error);
      if (violationsRes.data) localState.violations = violationsRes.data;
+     
+     if (documentsRes.error) console.error('fetch documents error:', documentsRes.error);
+     if (documentsRes.data) localState.documents = documentsRes.data;
+     
+     if (settingsRes.error) console.error('fetch settings error:', settingsRes.error);
      if (settingsRes.data) localState.settings = { ...defaultSettings, ...settingsRes.data };
 
      notify();
 
-     // Subscribe to real-time changes
-     const channel = supabase.channel('public-db-changes');
-     
-     const handleRt = (table: string, payload: any) => {
-         const listKey = table === 'exam_sessions' ? 'sessions' : table as keyof DBState;
-         if (table === 'settings') {
-             if (payload.new) {
-                 localState.settings = { ...defaultSettings, ...payload.new };
-                 notify();
-             }
-             return;
-         }
-         if (!localState[listKey]) (localState as any)[listKey] = [];
-         const list = localState[listKey] as any[];
-         if (payload.eventType === 'INSERT') {
-             if (!list.find((i: any) => i.id === payload.new.id)) list.push(payload.new);
-         } else if (payload.eventType === 'UPDATE') {
-             const idx = list.findIndex((i: any) => i.id === payload.new.id);
-             if (idx >= 0) list[idx] = payload.new;
-             else list.push(payload.new);
-         } else if (payload.eventType === 'DELETE') {
-             (localState as any)[listKey] = list.filter((i: any) => i.id !== payload.old.id);
-         }
-         notify();
-     };
+     if (!supabase.getChannels().find(c => c.topic === 'realtime:public-db-changes')) {
+       // Subscribe to real-time changes
+       const channel = supabase.channel('public-db-changes');
+       
+       const handleRt = (table: string, payload: any) => {
+           const listKey = table === 'exam_sessions' ? 'sessions' : table as keyof DBState;
+           if (table === 'settings') {
+               if (payload.new) {
+                   localState.settings = { ...defaultSettings, ...payload.new };
+                   notify();
+               }
+               return;
+           }
+           if (!localState[listKey]) (localState as any)[listKey] = [];
+           const list = localState[listKey] as any[];
+           if (payload.eventType === 'INSERT') {
+               if (!list.find((i: any) => i.id === payload.new.id)) list.push(payload.new);
+           } else if (payload.eventType === 'UPDATE') {
+               const idx = list.findIndex((i: any) => i.id === payload.new.id);
+               if (idx >= 0) list[idx] = payload.new;
+               else list.push(payload.new);
+           } else if (payload.eventType === 'DELETE') {
+               (localState as any)[listKey] = list.filter((i: any) => i.id !== payload.old.id);
+           }
+           notify();
+       };
 
-     ['users', 'subjects', 'questions', 'exams', 'exam_sessions', 'results', 'attendance', 'settings', 'violations'].forEach(table => {
-         channel.on('postgres_changes', { event: '*', schema: 'public', table }, (p) => handleRt(table, p));
-     });
-     channel.subscribe();
+       ['users', 'subjects', 'questions', 'exams', 'exam_sessions', 'results', 'attendance', 'settings', 'violations', 'documents'].forEach(table => {
+           channel.on('postgres_changes', { event: '*', schema: 'public', table }, (p) => handleRt(table, p));
+       });
+       channel.subscribe();
+     }
 
    } catch(e) {
       console.error("Supabase sync error:", e);
@@ -168,6 +179,12 @@ const syncFromSupabase = async () => {
 }
 
 syncFromSupabase();
+
+if (typeof window !== 'undefined') {
+  window.addEventListener('focus', () => {
+    syncFromSupabase(true);
+  });
+}
 
 export const db = {
   get(): DBState {
@@ -336,7 +353,6 @@ export const db = {
   },
   
   resetDemoData() {
-    localStorage.removeItem(DB_KEY);
     window.location.reload();
   },
   clearDemoData() {
@@ -354,7 +370,6 @@ export const db = {
       violations: []
     };
     notify();
-    localStorage.removeItem(DB_KEY);
   },
 
   getAttendance() { return localState.attendance || []; },
@@ -407,10 +422,12 @@ export const db = {
     if (!localState.documents) localState.documents = [];
     localState.documents.push(doc);
     notify();
+    supabase.from('documents').insert(doc).then(r => { if(r.error) console.error("Doc insert err:", r.error) });
   },
   deleteDocument(id: string) {
     if (!localState.documents) return;
     localState.documents = localState.documents.filter(d => d.id !== id);
     notify();
+    supabase.from('documents').delete().eq('id', id).then();
   }
 };
