@@ -160,8 +160,8 @@ export default function AdminExams() {
       </div>
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-full max-w-2xl shadow-xl my-8">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-2xl shadow-xl my-4 sm:my-8 shrink-0">
             <div className="p-6">
               <h3 className="text-xl font-bold text-slate-800 mb-4">{editingExam ? 'Edit Exam' : 'Create Exam'}</h3>
               <div className="space-y-4">

@@ -29,6 +29,7 @@ interface DBState {
   results: Result[];
   attendance: AttendanceRecord[];
   violations: Violation[];
+  documents: any[];
   settings?: Settings;
 }
 
@@ -44,7 +45,6 @@ const defaultSettings: Settings = {
   darkMode: false,
   antiCheatingEnabled: true,
 };
-
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];
 
@@ -76,6 +76,7 @@ const defaultDB: DBState = {
   results: [],
   attendance: [],
   violations: [],
+  documents: [],
   settings: defaultSettings
 };
 
@@ -335,10 +336,25 @@ export const db = {
   },
   
   resetDemoData() {
-    console.log("Resetting demo data is disabled in production.");
+    localStorage.removeItem(DB_KEY);
+    window.location.reload();
   },
   clearDemoData() {
-    console.log("Clearing demo data is disabled in production.");
+    localState = {
+      users: [],
+      exams: [],
+      questions: [],
+      subjects: [],
+      sessions: [],
+      flags: [],
+      results: [],
+      attendance: [],
+      documents: [],
+      settings: defaultSettings,
+      violations: []
+    };
+    notify();
+    localStorage.removeItem(DB_KEY);
   },
 
   getAttendance() { return localState.attendance || []; },
@@ -382,5 +398,19 @@ export const db = {
     notify();
     const dbObj = { ...defaultSettings, id: 1 };
     supabase.from('settings').upsert(dbObj).then();
+  },
+
+  getDocuments() {
+    return localState.documents || [];
+  },
+  addDocument(doc: any) {
+    if (!localState.documents) localState.documents = [];
+    localState.documents.push(doc);
+    notify();
+  },
+  deleteDocument(id: string) {
+    if (!localState.documents) return;
+    localState.documents = localState.documents.filter(d => d.id !== id);
+    notify();
   }
 };

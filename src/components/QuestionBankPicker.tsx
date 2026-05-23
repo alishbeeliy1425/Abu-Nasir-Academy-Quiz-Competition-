@@ -56,8 +56,8 @@ export function QuestionBankPicker({ isOpen, onClose, onAttach, examSubjects }: 
   };
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <Card className="w-full max-w-4xl shadow-2xl relative bg-white flex flex-col max-h-[85vh]">
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+      <Card className="w-full max-w-4xl shadow-2xl relative bg-white flex flex-col max-h-[95vh] sm:max-h-[85vh]">
         <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
           <div>
             <h2 className="text-xl font-bold text-slate-800">Question Bank Library</h2>

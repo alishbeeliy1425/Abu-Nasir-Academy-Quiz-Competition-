@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { Download, X, FileText, FileSpreadsheet, File } from 'lucide-react';
 import { db } from '../lib/store';
 import * as XLSX from 'xlsx';
-import jsPDF from 'jspdf';
-import autoTable from 'jspdf-autotable';
+import { jsPDF } from 'jspdf';
+import 'jspdf-autotable';
 
 export interface ExportModalProps {
   isOpen: boolean;
@@ -128,7 +129,7 @@ export function ExportModal({ isOpen, onClose, examId }: ExportModalProps) {
         doc.setFontSize(10);
         doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 22);
         
-        autoTable(doc, { 
+        (doc as any).autoTable({ 
           head: [headers], 
           body: body,
           startY: 30,
@@ -155,7 +156,7 @@ export function ExportModal({ isOpen, onClose, examId }: ExportModalProps) {
     }
   };
 
-  return (
+  return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
       <Card className="w-full max-w-md shadow-2xl relative overflow-hidden">
         <button onClick={onClose} disabled={isExporting} className="absolute right-4 top-4 text-slate-400 hover:text-slate-700">
@@ -228,6 +229,6 @@ export function ExportModal({ isOpen, onClose, examId }: ExportModalProps) {
           </div>
         </div>
       </Card>
-    </div>
+    </div>, document.body
   );
 }

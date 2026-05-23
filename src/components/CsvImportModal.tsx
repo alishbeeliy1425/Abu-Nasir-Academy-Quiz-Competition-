@@ -1,4 +1,5 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { Card } from './ui/card';
 import { Button } from './ui/button';
 import { X, UploadCloud, AlertCircle, FileSpreadsheet, CheckCircle, Download } from 'lucide-react';
@@ -19,6 +20,17 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
   const [importProgress, setImportProgress] = useState(0);
   const [importStats, setImportStats] = useState({ success: 0, dups: 0, errors: 0 });
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // reset on open
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setFile(null);
+      setError(null);
+      setCsvData([]);
+      setImportProgress(0);
+    }
+  }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -128,9 +140,9 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
     setImportProgress(0);
   };
 
-  return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
-      <Card className="w-full max-w-3xl shadow-2xl relative overflow-hidden bg-white">
+  return createPortal(
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-2 sm:p-4 bg-slate-900/60 backdrop-blur-sm">
+      <Card className="w-full max-w-3xl shadow-2xl relative overflow-hidden bg-white max-h-[90vh] flex flex-col">
         {(step === 1 || step === 2) && (
           <button onClick={onClose} className="absolute right-4 top-4 text-slate-400 hover:text-red-500 z-10 transition-colors bg-white rounded-full shadow-sm hover:shadow">
             <X className="w-5 h-5" />
@@ -253,6 +265,6 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
         )}
 
       </Card>
-    </div>
+    </div>, document.body
   );
 }

@@ -200,8 +200,8 @@ export default function AdminQuestions() {
       </div>
 
       {isAiModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
-          <div className="w-full max-w-xl relative group">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-xl relative group my-4 sm:my-8 shrink-0">
             {/* Ambient Glow */}
             <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-1000"></div>
             
@@ -300,8 +300,8 @@ export default function AdminQuestions() {
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
-          <Card className="w-full max-w-2xl shadow-xl mt-12 mb-12">
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto">
+          <Card className="w-full max-w-2xl shadow-xl my-4 sm:my-8 shrink-0">
             <div className="p-6">
               <h3 className="text-xl font-bold text-slate-800 mb-4">{editingQuestion ? 'Edit Question' : 'Add New Question'}</h3>
               <div className="space-y-4">
