@@ -52,8 +52,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const login = async (email: string) => {
-    // Simulate network delay
-    await new Promise(r => setTimeout(r, 500));
     const foundUser = db.login(email);
     if (foundUser && foundUser.role !== 'admin') {
       setUser(foundUser);
