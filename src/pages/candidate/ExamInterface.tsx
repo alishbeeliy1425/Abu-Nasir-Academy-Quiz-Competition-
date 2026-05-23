@@ -21,6 +21,8 @@ export default function ExamInterface() {
   const [examStarted, setExamStarted] = useState(false);
   const [hasReadInstructions, setHasReadInstructions] = useState(false);
   const [webcamEnabled, setWebcamEnabled] = useState(false);
+  const [stream, setStream] = useState<MediaStream | null>(null);
+  const videoRef = useRef<HTMLVideoElement>(null);
   const [examObj, setExamObj] = useState<any>(null);
   
   // Submit Modal & States
@@ -28,6 +30,18 @@ export default function ExamInterface() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
   // Load Exam
+  useEffect(() => {
+    if (stream && videoRef.current) {
+      videoRef.current.srcObject = stream;
+    }
+    
+    return () => {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+      }
+    };
+  }, [stream, videoRef]);
+
   useEffect(() => {
     if (!examId) return;
     const exam = db.getExams().find(e => e.id === examId);
@@ -97,11 +111,28 @@ export default function ExamInterface() {
         });
     };
 
+    const handleFullscreenChange = () => {
+      if (!hasReadInstructions || db.getSettings().antiCheatingEnabled === false) return;
+      if (!document.fullscreenElement) {
+        db.saveViolation({
+          id: `viol_${Date.now()}_${Math.random().toString(36).substr(2, 6)}`,
+          candidateId: user?.id || 'unknown',
+          examId: examId,
+          timestamp: new Date().toISOString(),
+          type: 'fullscreen_exited',
+          description: 'Candidate exited fullscreen mode'
+        });
+      }
+    };
+
     window.addEventListener('blur', handleBlur);
     document.addEventListener('visibilitychange', handleVisibilityChange);
+    document.addEventListener('fullscreenchange', handleFullscreenChange);
+    
     return () => {
       window.removeEventListener('blur', handleBlur);
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+      document.removeEventListener('fullscreenchange', handleFullscreenChange);
       if (document.fullscreenElement) {
         document.exitFullscreen().catch(() => {});
       }
@@ -172,16 +203,9 @@ export default function ExamInterface() {
       // Prompt for camera access
       try {
         const stream = await navigator.mediaDevices.getUserMedia({ video: true });
-        // Keeping it stealthy: We asked for permission, stream is active, we don't necessarily need to render it to the user yet, but they know we have camera access.
-        // The instructions will mention they are monitored.
-        
-        // (Optional) We can stop the stream immediately if we are just verifying permission, 
-        // or keep it running if we build out WebRTC peering. Since this is stealth monitoring,
-        // we'll keep it simple and just ensure permission is granted.
         
         setWebcamEnabled(true);
-        stream.getTracks().forEach(track => track.stop()); // Stop immediately to just verify access, or we leave it running if we do live WebRTC. 
-        // We'll leave it simple for now: if they grant it, they can proceed.
+        setStream(stream);
 
         const elem = document.documentElement;
         if (elem.requestFullscreen) {
@@ -243,7 +267,7 @@ export default function ExamInterface() {
             </div>
 
             <Button onClick={handleStart} className="w-full h-14 text-lg font-bold bg-blue-600 hover:bg-blue-700 text-white shadow-lg shadow-blue-500/20">
-              START EXAM
+              START EXAM (REQUIRES CAMERA)
             </Button>
           </div>
         </Card>
@@ -376,10 +400,15 @@ export default function ExamInterface() {
               </span>
               <span className="flex h-2.5 w-2.5 rounded-full bg-red-500 animate-pulse"></span>
             </div>
-            <div className="w-full h-28 bg-slate-900 rounded-lg flex flex-col items-center justify-center text-slate-300 text-xs border border-slate-700 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden">
-                <Video className="w-6 h-6 mb-2 opacity-50 text-indigo-400" />
-                <span className="text-indigo-200">Live Stream Protected</span>
-                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-600 to-rose-600 w-full animate-[progress_2s_ease-in-out_infinite] opacity-50"></div>
+            <div className="w-full h-32 bg-slate-900 rounded-lg flex flex-col items-center justify-center text-slate-300 text-xs border border-slate-700 shadow-[inset_0_0_20px_rgba(0,0,0,0.5)] relative overflow-hidden">
+                <video ref={videoRef} autoPlay playsInline muted className="absolute inset-0 w-full h-full object-cover transform -scale-x-100" />
+                <div className="absolute inset-x-0 bottom-0 h-1 bg-gradient-to-r from-red-600 to-rose-600 w-full animate-[progress_2s_ease-in-out_infinite] opacity-50 z-10"></div>
+                {!stream && (
+                  <>
+                    <Video className="w-6 h-6 mb-2 opacity-50 text-indigo-400" />
+                    <span className="text-indigo-200">Starting Stream...</span>
+                  </>
+                )}
             </div>
           </div>
         </div>

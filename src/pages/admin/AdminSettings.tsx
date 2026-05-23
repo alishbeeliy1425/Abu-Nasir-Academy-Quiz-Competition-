@@ -319,6 +319,16 @@ export default function AdminSettings() {
                   </div>
                   <div className="md:col-span-2 pt-4 border-t border-slate-100 flex items-center justify-between">
                     <div>
+                      <h4 className="text-sm font-bold text-slate-800">Stealth AI Anti-Cheat Engine</h4>
+                      <p className="text-xs text-slate-500 mt-0.5">Silently track candidates switching tabs, minimizing browser, or changing windows during exams.</p>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                      <input type="checkbox" className="sr-only peer" checked={settings.antiCheatingEnabled} onChange={e => setSettings({...settings, antiCheatingEnabled: e.target.checked})} />
+                      <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                    </label>
+                  </div>
+                  <div className="md:col-span-2 pt-4 border-t border-slate-100 flex items-center justify-between">
+                    <div>
                       <h4 className="text-sm font-bold text-slate-800">Auto-Submit Exams</h4>
                       <p className="text-xs text-slate-500 mt-0.5">Automatically force submit exams when timer elapses if candidate is still active.</p>
                     </div>

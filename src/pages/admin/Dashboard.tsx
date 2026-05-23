@@ -24,6 +24,7 @@ import AdminDocuments from './AdminDocuments';
 import AdminExams from './cbt/AdminExams';
 import AdminQuestions from './cbt/AdminQuestions';
 import AdminMonitor from './cbt/AdminMonitor';
+import AdminFlags from './cbt/AdminFlags';
 import AdminSubjects from './cbt/AdminSubjects';
 
 import AdminSettings from './AdminSettings';
@@ -288,7 +289,8 @@ export default function AdminDashboard() {
       children: [
         { name: 'Manage Exams', href: '/admin/cbt/exams' },
         { name: 'Question Bank', href: '/admin/cbt/questions' },
-        { name: 'Live Monitor', href: '/admin/cbt/monitor' },
+        { name: 'Live Proctoring', href: '/admin/cbt/monitor' },
+        { name: 'Flagged Activities', href: '/admin/cbt/flags' },
         { name: 'Subjects', href: '/admin/cbt/subjects' },
       ]
     },
@@ -342,6 +344,7 @@ export default function AdminDashboard() {
               <Route path="cbt/exams" element={<AdminExams />} />
               <Route path="cbt/questions" element={<AdminQuestions />} />
               <Route path="cbt/monitor" element={<AdminMonitor />} />
+              <Route path="cbt/flags" element={<AdminFlags />} />
               <Route path="cbt/subjects" element={<AdminSubjects />} />
               
               {/* Result Routes */}
