@@ -105,7 +105,6 @@ export default function AdminQuestions() {
       explanation: ''
     };
     
-    if (editingQuestion) db.deleteQuestion(editingQuestion.id);
     db.addQuestion(updated);
     setIsModalOpen(false);
   };

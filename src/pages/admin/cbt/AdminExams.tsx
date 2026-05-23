@@ -53,7 +53,6 @@ export default function AdminExams() {
 
   const handleToggleStatus = (exam: Exam) => {
     const updated = { ...exam, status: exam.status === 'active' ? 'inactive' : 'active' } as Exam;
-    db.deleteExam(exam.id); 
     db.addExam(updated); 
   };
   
@@ -118,7 +117,6 @@ export default function AdminExams() {
       questionsPerCandidate: Number(formData.questionsPerCandidate) || 40,
       instructions: formData.instructions || ''
     };
-    if (editingExam) db.deleteExam(editingExam.id);
     db.addExam(updated);
     if (!editingExam) {
        setEditingExam(updated); // Persist temporary so picker doesn't lose context if save re-opens
@@ -136,7 +134,6 @@ export default function AdminExams() {
     questionIds.forEach(id => {
        const q = storeQuestions.find(sq => sq.id === id);
        if (q) {
-         db.deleteQuestion(id);
          db.addQuestion({ ...q, examId: editingExam.id });
          attachedCount++;
        }

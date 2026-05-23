@@ -16,8 +16,7 @@ const CandidateExams = () => {
   const [now, setNow] = useState(Date.now());
 
   useEffect(() => {
-    // We want to fetch all exams, or maybe just active ones and scheduled ones.
-    // For now, let's fetch all exams. If it's inactive and has no startDate, we still show it with "check back later".
+    // Only show active or scheduled (which could be inactive as a draft)
     setExams(db.getExams().slice().reverse());
   }, []);
 
@@ -35,55 +34,128 @@ const CandidateExams = () => {
         {exams.map(exam => {
           const hasTaken = user ? results.some(r => r.candidateId === user.id && r.examId === exam.id) : false;
           const session = user ? db.getSessions().find(s => s.candidateId === user.id && s.examId === exam.id) : null;
-          // If session is completed or result exists, it's taken.
           const isCompleted = hasTaken || (session && session.status === 'completed');
           
           let isScheduled = false;
           let timeToStart = 0;
+          let isAutoActivated = false;
+          
           if (exam.startDate) {
             const startTimestamp = new Date(exam.startDate).getTime();
             if (startTimestamp > now) {
               isScheduled = true;
               timeToStart = startTimestamp - now;
+            } else {
+              isAutoActivated = true; // Auto-activates once time hits 0
             }
           }
 
           let state = 'available';
           if (isCompleted) state = 'completed';
           else if (isScheduled) state = 'scheduled';
-          else if (exam.status === 'inactive') state = 'inactive';
+          else if (!isAutoActivated && exam.status === 'inactive') state = 'inactive';
+
+          // Formatting scheduled date
+          let formattedDate = "";
+          let formattedTime = "";
+          if (exam.startDate) {
+             const sd = new Date(exam.startDate);
+             formattedDate = sd.toLocaleDateString(undefined, { day: 'numeric', month: 'long', year: 'numeric' });
+             formattedTime = sd.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' });
+          }
+
+          if (state === 'scheduled') {
+            const days = Math.floor(timeToStart / (1000 * 60 * 60 * 24));
+            const hours = Math.floor((timeToStart % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+            const minutes = Math.floor((timeToStart % (1000 * 60 * 60)) / (1000 * 60));
+            const seconds = Math.floor((timeToStart % (1000 * 60)) / 1000);
+
+            return (
+              <Card key={exam.id} className="relative overflow-hidden group shadow-lg border-0 bg-white ring-1 ring-slate-200">
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/5 to-purple-500/5 z-0 pointer-events-none" />
+                <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-indigo-500 to-purple-500" />
+                
+                <CardHeader className="relative z-10 pb-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-xl text-slate-900 leading-tight pr-2">{exam.title}</h3>
+                    <span className="bg-indigo-100 text-indigo-700 text-[10px] font-bold px-2.5 py-1 uppercase rounded-full tracking-wider shrink-0 shadow-sm border border-indigo-200">
+                      Upcoming
+                    </span>
+                  </div>
+                  <p className="text-sm text-slate-500 font-medium">Begins on:</p>
+                  <p className="text-slate-800 font-semibold">{formattedDate} — {formattedTime}</p>
+                </CardHeader>
+                
+                <CardContent className="relative z-10 pt-2">
+                  <div className="grid grid-cols-4 gap-2 mb-6 text-center">
+                     <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-sm">
+                       <span className="block text-xl font-bold font-mono text-indigo-600">{days}</span>
+                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Days</span>
+                     </div>
+                     <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-sm">
+                       <span className="block text-xl font-bold font-mono text-indigo-600">{hours.toString().padStart(2, '0')}</span>
+                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Hrs</span>
+                     </div>
+                     <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-sm">
+                       <span className="block text-xl font-bold font-mono text-indigo-600">{minutes.toString().padStart(2, '0')}</span>
+                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Min</span>
+                     </div>
+                     <div className="bg-slate-50 rounded-lg p-2 border border-slate-200/60 shadow-sm">
+                       <span className="block text-xl font-bold font-mono text-indigo-600">{seconds.toString().padStart(2, '0')}</span>
+                       <span className="text-[10px] uppercase font-bold text-slate-500 tracking-wider">Sec</span>
+                     </div>
+                  </div>
+                  
+                  <Button disabled className="w-full bg-slate-100 text-slate-500 border border-slate-200 opacity-80 cursor-not-allowed">
+                    Starts Automatically
+                  </Button>
+                </CardContent>
+              </Card>
+            );
+          }
+
+          if (state === 'inactive') {
+             return (
+              <Card key={exam.id} className="relative overflow-hidden group shadow-sm border-0 bg-slate-50 ring-1 ring-slate-200 opacity-80">
+                <CardHeader className="relative z-10 pb-4">
+                  <div className="flex justify-between items-start mb-3">
+                    <h3 className="font-bold text-xl text-slate-700 leading-tight">{exam.title}</h3>
+                  </div>
+                  <p className="text-sm text-slate-500 font-medium">Exam is being prepared.</p>
+                  <p className="text-slate-600 text-sm">Please check back later.</p>
+                </CardHeader>
+                <CardContent>
+                  <Button disabled className="w-full bg-white text-slate-400 border border-slate-200 shadow-sm">
+                    Waiting for Admin
+                  </Button>
+                </CardContent>
+              </Card>
+             );
+          }
 
           return (
-            <Card key={exam.id} className={`hover:shadow-lg transition-shadow border-t-4 ${state === 'completed' ? 'border-green-500 opacity-90' : state === 'scheduled' ? 'border-amber-500' : state === 'inactive' ? 'border-slate-300 opacity-80' : 'border-blue-600'}`}>
+            <Card key={exam.id} className={`hover:shadow-lg transition-all transform hover:-translate-y-1 duration-200 border-0 ring-1 ${state === 'completed' ? 'ring-green-400/50 bg-green-50/10' : 'ring-blue-400/50 bg-white'}`}>
+              <div className={`absolute top-0 left-0 w-full h-1 ${state === 'completed' ? 'bg-green-500' : 'bg-blue-600'}`} />
               <CardHeader>
                 <div className="flex justify-between items-start mb-2">
-                  <h3 className="font-bold text-lg text-slate-900 leading-tight">{exam.title}</h3>
-                  {state === 'completed' && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 uppercase rounded tracking-wider">Completed</span>}
-                  {state === 'scheduled' && <span className="bg-amber-100 text-amber-700 text-[10px] font-bold px-2 py-1 uppercase rounded tracking-wider">Scheduled</span>}
+                  <h3 className="font-bold text-xl text-slate-900 leading-tight pr-4">{exam.title}</h3>
+                  {state === 'completed' && <span className="bg-green-100 text-green-700 text-[10px] font-bold px-2 py-1 uppercase rounded tracking-wider shrink-0">Completed</span>}
                 </div>
                 <p className="text-sm text-slate-500">{exam.subjects.join(', ')}</p>
               </CardHeader>
               <CardContent>
                 <div className="flex justify-between items-center text-sm text-slate-600 mb-6">
-                  <span>Duration: {exam.durationMinutes} mins</span>
-                  <span className="font-medium bg-slate-100 px-2 py-1 rounded text-xs">{exam.questionsPerCandidate || 40} Questions</span>
+                  <span className="flex items-center gap-1.5"><PlayCircle className="w-4 h-4 text-slate-400"/> {exam.durationMinutes} mins</span>
+                  <span className="font-medium bg-slate-100 px-2 py-1 rounded text-xs border border-slate-200">{exam.questionsPerCandidate || 40} Questions</span>
                 </div>
                 
                 {state === 'completed' ? (
                   <Button variant="outline" onClick={() => navigate('/candidate/results')} className="w-full bg-green-50 text-green-700 border-green-200 hover:bg-green-100">
                     View Result
                   </Button>
-                ) : state === 'scheduled' ? (
-                  <Button disabled className="w-full bg-amber-50 text-amber-700 hover:bg-amber-50 border border-amber-200">
-                    Opens in: {Math.floor(timeToStart / 3600000)}h {Math.floor((timeToStart % 3600000) / 60000)}m {Math.floor((timeToStart % 60000) / 1000)}s
-                  </Button>
-                ) : state === 'inactive' ? (
-                  <Button disabled className="w-full bg-slate-100 text-slate-500 hover:bg-slate-100 border border-slate-200">
-                    Exam Loading, Check Back...
-                  </Button>
                 ) : (
-                  <Button onClick={() => navigate(`/candidate/take-exam/${exam.id}`)} className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm">
-                    Enter Exam
+                  <Button onClick={() => navigate(`/candidate/take-exam/${exam.id}`)} className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium tracking-wide">
+                    START EXAM
                   </Button>
                 )}
               </CardContent>
@@ -91,8 +163,9 @@ const CandidateExams = () => {
           );
         })}
         {exams.length === 0 && (
-          <div className="col-span-full p-8 text-center bg-white rounded-xl border border-dashed border-slate-300">
-            <p className="text-slate-500">No exams available at the moment.</p>
+          <div className="col-span-full p-12 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300">
+            <h3 className="text-xl font-bold text-slate-700 mb-2">No Exams Found</h3>
+            <p className="text-slate-500">There are currently no upcoming or available exams.</p>
           </div>
         )}
       </div>

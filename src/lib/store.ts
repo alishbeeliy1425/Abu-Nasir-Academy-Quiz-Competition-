@@ -90,6 +90,36 @@ const notify = () => {
 
 let isSynced = false;
 
+const mapExamFromDB = (dbExam: any): Exam => {
+  return {
+    id: dbExam.id,
+    title: dbExam.exam_name || dbExam.title || 'Untitled Exam',
+    durationMinutes: dbExam.duration || dbExam.durationMinutes || 60,
+    subjects: dbExam.subject ? dbExam.subject.split(',').map((s: string)=>s.trim()) : (dbExam.subjects || []),
+    status: dbExam.status || 'inactive',
+    instructions: dbExam.instructions || '',
+    startDate: dbExam.start_time || dbExam.startDate,
+    gradingSystem: dbExam.gradingSystem || 'JAMB',
+    department: dbExam.department,
+    academicSession: dbExam.academicSession,
+    shuffleQuestions: dbExam.shuffleQuestions ?? true,
+    shuffleOptions: dbExam.shuffleOptions ?? true,
+    questionsPerCandidate: dbExam.questionsPerCandidate || 50,
+  };
+};
+
+const mapExamToDB = (e: Exam): any => {
+  return {
+    id: e.id,
+    exam_name: e.title,
+    subject: e.subjects && e.subjects.length > 0 ? e.subjects.join(', ') : '',
+    duration: e.durationMinutes,
+    status: e.status,
+    instructions: e.instructions || '',
+    start_time: e.startDate || null,
+  };
+};
+
 // Sync from supabase!
 export const syncFromSupabase = async (force = false) => {
    if (isSynced && !force) return;
@@ -118,7 +148,7 @@ export const syncFromSupabase = async (force = false) => {
      if (questionsRes.data) localState.questions = questionsRes.data;
      
      if (examsRes.error) console.error('fetch exams error:', examsRes.error);
-     if (examsRes.data) localState.exams = examsRes.data;
+     if (examsRes.data) localState.exams = examsRes.data.map(mapExamFromDB);
      
      if (sessionsRes.error) console.error('fetch sessions error:', sessionsRes.error);
      if (sessionsRes.data) localState.sessions = sessionsRes.data;
@@ -155,12 +185,16 @@ export const syncFromSupabase = async (force = false) => {
            }
            if (!localState[listKey]) (localState as any)[listKey] = [];
            const list = localState[listKey] as any[];
+           
+           let item = payload.new;
+           if (item && table === 'exams') item = mapExamFromDB(item);
+
            if (payload.eventType === 'INSERT') {
-               if (!list.find((i: any) => i.id === payload.new.id)) list.push(payload.new);
+               if (!list.find((i: any) => i.id === item.id)) list.push(item);
            } else if (payload.eventType === 'UPDATE') {
-               const idx = list.findIndex((i: any) => i.id === payload.new.id);
-               if (idx >= 0) list[idx] = payload.new;
-               else list.push(payload.new);
+               const idx = list.findIndex((i: any) => i.id === item.id);
+               if (idx >= 0) list[idx] = item;
+               else list.push(item);
            } else if (payload.eventType === 'DELETE') {
                (localState as any)[listKey] = list.filter((i: any) => i.id !== payload.old.id);
            }
@@ -202,9 +236,10 @@ export const db = {
   },
 
   addUser(u: User) {
-    localState.users.push(u);
+    const idx = localState.users.findIndex(x => x.id === u.id);
+    if(idx >= 0) localState.users[idx] = u; else localState.users.push(u);
     notify();
-    supabase.from('users').insert(u).then(r => { if(r.error) console.error("User insert err:", r.error) });
+    supabase.from('users').upsert(u).then((r: any) => { if(r.error) console.error("User insert err:", r.error) });
   },
 
   deleteUser(id: string) {
@@ -229,9 +264,10 @@ export const db = {
 
   getQuestions() { return localState.questions || []; },
   addQuestion(q: Question) {
-    localState.questions.push(q);
+    const idx = localState.questions.findIndex(x => x.id === q.id);
+    if(idx >= 0) localState.questions[idx] = q; else localState.questions.push(q);
     notify();
-    supabase.from('questions').upsert(q).then();
+    supabase.from('questions').upsert(q).then((r: any) => { if(r.error) console.error("Question Insert Error:", r.error); });
   },
   deleteQuestion(id: string) {
     localState.questions = localState.questions.filter(q => q.id !== id);
@@ -244,7 +280,10 @@ export const db = {
     const idx = (localState.exams||[]).findIndex(x => x.id === e.id);
     if(idx >= 0) localState.exams[idx] = e; else localState.exams.push(e);
     notify();
-    supabase.from('exams').upsert(e).then();
+    const dbExam = mapExamToDB(e);
+    supabase.from('exams').upsert(dbExam).then(r => {
+      if (r.error) console.error("Exam upsert error:", r.error);
+    });
   },
   deleteExam(id: string) {
     localState.exams = localState.exams.filter(exam => exam.id !== id);
