@@ -49,7 +49,7 @@ export function QuestionBankPicker({ isOpen, onClose, onAttach, examSubjects }: 
       alert("Please select at least one question.");
       return;
     }
-    const arr = Array.from(selectedIds);
+    const arr = [...selectedIds];
     onAttach(arr);
     setSelectedIds(new Set());
     onClose();

@@ -192,14 +192,21 @@ if (typeof window !== 'undefined') {
 }
 
 export const db = {
-  get(): DBState {
-    return localState;
-  },
-  
+  get() { return localState; },
   subscribe(listener: Listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
+  getUsers() { return [...(localState.users || [])]; },
+  getSubjects() { return [...(localState.subjects || [])]; },
+  getQuestions() { return [...(localState.questions || [])]; },
+  getExams() { return [...(localState.exams || [])]; },
+  getSessions() { return [...(localState.sessions || [])]; },
+  getResults() { return [...(localState.results || [])]; },
+  getSettings() { return { ...localState.settings }; },
+  getAttendance() { return [...(localState.attendance || [])]; },
+  getViolations() { return [...(localState.violations || [])]; },
+  getDocuments() { return [...(localState.documents || [])]; },
 
   // Auth Helpers
   login(email: string): User | null {
@@ -219,7 +226,7 @@ export const db = {
     supabase.from('users').delete().eq('id', id).then();
   },
 
-  getSubjects() { return localState.subjects || []; },
+
   saveSubject(s: Subject) {
     const idx = (localState.subjects||[]).findIndex(x => x.id === s.id);
     if (idx >= 0) localState.subjects[idx] = s;
@@ -233,7 +240,7 @@ export const db = {
     supabase.from('subjects').delete().eq('id', id).then();
   },
 
-  getQuestions() { return localState.questions || []; },
+
   addQuestion(q: Question) {
     const idx = localState.questions.findIndex(x => x.id === q.id);
     if(idx >= 0) localState.questions[idx] = q; else localState.questions.push(q);
@@ -246,13 +253,34 @@ export const db = {
     supabase.from('questions').delete().eq('id', id).then();
   },
   
-  getExams() { return localState.exams || []; },
+
   addExam(e: Exam) {
     const idx = (localState.exams||[]).findIndex(x => x.id === e.id);
     if(idx >= 0) localState.exams[idx] = e; else localState.exams.push(e);
     notify();
-    supabase.from('exams').upsert(e).then(r => {
-      if (r.error) console.error("Exam upsert error:", r.error);
+    
+    const dbExam = {
+      id: e.id,
+      title: e.title,
+      durationMinutes: e.durationMinutes,
+      subjects: e.subjects || [],
+      status: e.status,
+      gradingSystem: e.gradingSystem || 'WAEC',
+      academicSession: e.academicSession || null,
+      startDate: e.startDate || null,
+      endDate: e.endDate || null,
+      department: e.department || null,
+      shuffleQuestions: e.shuffleQuestions ?? true,
+      shuffleOptions: e.shuffleOptions ?? true,
+      questionsPerCandidate: e.questionsPerCandidate || null,
+      instructions: e.instructions || null
+    };
+
+    supabase.from('exams').upsert(dbExam).then(r => {
+      if (r.error) {
+         console.error("Exam upsert error:", r.error);
+         alert("Failed to save exam to database: " + r.error.message);
+      }
     });
   },
   deleteExam(id: string) {
@@ -341,7 +369,7 @@ export const db = {
     return pool;
   },
 
-  getSessions() { return localState.sessions || []; },
+
   saveSession(session: ExamSession) {
     if(!localState.sessions) localState.sessions = [];
     const idx = localState.sessions.findIndex(s => s.id === session.id);
@@ -351,7 +379,7 @@ export const db = {
     supabase.from('exam_sessions').upsert(session).then();
   },
 
-  getResults() { return localState.results || []; },
+
   saveResult(r: Result) {
     if(!localState.results) localState.results = [];
     const idx = localState.results.findIndex(x => x.id === r.id);
@@ -371,7 +399,6 @@ export const db = {
       questions: [],
       subjects: [],
       sessions: [],
-      flags: [],
       results: [],
       attendance: [],
       documents: [],
@@ -381,7 +408,7 @@ export const db = {
     notify();
   },
 
-  getAttendance() { return localState.attendance || []; },
+
   saveAttendance(record: AttendanceRecord) {
     if(!localState.attendance) localState.attendance = [];
     const idx = localState.attendance.findIndex(a => a.id === record.id);
@@ -400,7 +427,7 @@ export const db = {
     console.log("Mass clearing is disabled in production.");
   },
   
-  getViolations() { return localState.violations || []; },
+
   saveViolation(v: Violation) {
     if(!localState.violations) localState.violations = [];
     localState.violations.unshift(v); 
@@ -408,9 +435,7 @@ export const db = {
     supabase.from('violations').insert(v).then();
   },
 
-  getSettings() {
-    return localState.settings || defaultSettings;
-  },
+
   saveSettings(settings: typeof defaultSettings) {
     localState.settings = settings;
     notify();
@@ -424,9 +449,7 @@ export const db = {
     supabase.from('settings').upsert(dbObj).then();
   },
 
-  getDocuments() {
-    return localState.documents || [];
-  },
+
   addDocument(doc: any) {
     if (!localState.documents) localState.documents = [];
     localState.documents.push(doc);

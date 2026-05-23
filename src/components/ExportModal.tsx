@@ -78,16 +78,16 @@ export function ExportModal({ isOpen, onClose, examId }: ExportModalProps) {
             Email: u?.email || '',
             Exam: e?.title || r.examId,
             Score: r.score,
-            MaxScore: r.maxScore,
-            Percentage: ((r.score / r.maxScore) * 100).toFixed(1) + '%',
-            Date: new Date(r.timestamp).toLocaleString()
+            MaxScore: r.total,
+            Percentage: ((r.score / r.total) * 100).toFixed(1) + '%',
+            Date: new Date(r.date || Date.now()).toLocaleString()
           };
         });
       } else if (exportType === 'analytics') {
         // Aggregate analytics
         data = exams.map(e => {
           const exResults = results.filter(r => r.examId === e.id);
-          const avg = exResults.length ? exResults.reduce((sum, r) => sum + (r.score / r.maxScore) * 100, 0) / exResults.length : 0;
+          const avg = exResults.length ? exResults.reduce((sum, r) => sum + (r.score / r.total) * 100, 0) / exResults.length : 0;
           return {
             Exam: e.title,
             TotalCandidates: exResults.length,

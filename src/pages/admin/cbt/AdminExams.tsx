@@ -33,7 +33,7 @@ export default function AdminExams() {
   const [examToDelete, setExamToDelete] = useState<Exam | null>(null);
 
   useEffect(() => {
-    const loadExams = () => setExams(db.getExams());
+    const loadExams = () => setExams([...db.getExams()]);
     loadExams();
     return db.subscribe(loadExams);
   }, []);
