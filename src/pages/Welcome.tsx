@@ -87,7 +87,8 @@ export default function Welcome() {
             {settings.websiteName}
           </h1>
           <h2 className="text-3xl md:text-5xl lg:text-6xl font-extrabold mb-6 tracking-tight">
-            <span className="text-[#3b82f6]">Quiz</span> <span className="text-[#eab308]">Competition</span>
+            <span className="bg-gradient-to-r from-blue-400 to-blue-600 text-transparent bg-clip-text">Quiz</span>{" "}
+            <span className="bg-gradient-to-r from-yellow-300 to-yellow-500 text-transparent bg-clip-text">Competition</span>
           </h2>
           
           <p className="text-gray-300 text-base md:text-lg mb-10 max-w-2xl mx-auto leading-relaxed px-4">
