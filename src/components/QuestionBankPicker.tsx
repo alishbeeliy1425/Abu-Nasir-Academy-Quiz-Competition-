@@ -25,7 +25,7 @@ export function QuestionBankPicker({ isOpen, onClose, onAttach, examSubjects }: 
   const filtered = questions.filter(q => {
     const matchesSearch = q.text.toLowerCase().includes(search.toLowerCase()) || 
                           (q.topic && q.topic.toLowerCase().includes(search.toLowerCase()));
-    const matchesSubject = subjectFilter ? q.subject === subjectFilter : true;
+    const matchesSubject = subjectFilter ? q.subject.toLowerCase() === subjectFilter.toLowerCase() : true;
     return matchesSearch && matchesSubject;
   });
 
@@ -87,7 +87,7 @@ export function QuestionBankPicker({ isOpen, onClose, onAttach, examSubjects }: 
               className="w-full sm:w-48 p-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
               <option value="">All Subjects</option>
-              {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+              {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject)])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
         </div>

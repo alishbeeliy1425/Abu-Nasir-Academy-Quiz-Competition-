@@ -179,7 +179,7 @@ export default function AdminQuestions() {
 
   const filteredQuestions = questions.filter(q => {
     const textMatch = q.text.toLowerCase().includes(search.toLowerCase());
-    const subjectMatch = subjectFilter ? q.subject === subjectFilter : true;
+    const subjectMatch = subjectFilter ? q.subject.toLowerCase() === subjectFilter.toLowerCase() : true;
     return textMatch && subjectMatch;
   });
 
@@ -232,10 +232,7 @@ export default function AdminQuestions() {
                       <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Target Subject</label>
                       <select value={aiData.subject} onChange={e => setAiData({ ...aiData, subject: e.target.value })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 outline-none transition-all shadow-inner">
                         <option value="">Select subject...</option>
-                        {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
-                        <option value="English">English</option>
-                        <option value="Mathematics">Mathematics</option>
-                        <option value="Biology">Biology</option>
+                        {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject), "English", "Mathematics", "Biology"])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
                       </select>
                     </div>
                     <div className="space-y-2">
@@ -320,7 +317,7 @@ export default function AdminQuestions() {
                     <label className="block text-sm font-medium text-slate-700 mb-1">Subject</label>
                     <select value={formData.subject} onChange={e => setFormData({ ...formData, subject: e.target.value })} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                       <option value="">Select...</option>
-                      {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+                      {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject)])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
                     </select>
                   </div>
                   <div>
@@ -399,7 +396,7 @@ export default function AdminQuestions() {
                onChange={e => setSubjectFilter(e.target.value)}
              >
                <option value="">All Subjects</option>
-               {subjects.map(s => <option key={s.id} value={s.name}>{s.name}</option>)}
+               {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject)])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
              </select>
           </div>
         </div>
