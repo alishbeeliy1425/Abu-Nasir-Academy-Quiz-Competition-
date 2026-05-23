@@ -17,7 +17,9 @@ const CandidateExams = () => {
 
   useEffect(() => {
     // Only show active or scheduled (which could be inactive as a draft)
-    setExams(db.getExams().slice().reverse());
+    const loadExams = () => setExams(db.getExams().slice().reverse());
+    loadExams();
+    return db.subscribe(loadExams);
   }, []);
 
   useEffect(() => {
@@ -40,7 +42,7 @@ const CandidateExams = () => {
           let timeToStart = 0;
           let isAutoActivated = false;
           
-          if (exam.startDate) {
+          if (exam.startDate && exam.status !== 'active') {
             const startTimestamp = new Date(exam.startDate).getTime();
             if (startTimestamp > now) {
               isScheduled = true;
