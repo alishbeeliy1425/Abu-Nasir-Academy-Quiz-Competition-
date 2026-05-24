@@ -3,7 +3,7 @@ import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { db, useStore } from '../../../lib/store';
 import { Question, Subject, Exam } from '../../../types';
-import { Search, Plus, Upload, Edit, Trash2, Filter } from 'lucide-react';
+import { Search, Plus, Upload, Edit, Trash2, Filter, Sparkles, Loader2 } from 'lucide-react';
 import { CsvImportModal } from '../../../components/CsvImportModal';
 import { toast } from 'sonner';
 
@@ -18,6 +18,11 @@ export default function AdminQuestions() {
   const itemsPerPage = 50;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isAiModalOpen, setIsAiModalOpen] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [generationProgress, setGenerationProgress] = useState(0);
+  const [aiData, setAiData] = useState({ examId: '', subject: '', topic: '', difficulty: 'medium', count: '5' });
+
   const [isCsvModalOpen, setIsCsvModalOpen] = useState(false);
   const [editingQuestion, setEditingQuestion] = useState<Question | null>(null);
   
@@ -107,6 +112,122 @@ export default function AdminQuestions() {
     setIsCsvModalOpen(true);
   };
 
+  const handleAiGenerate = async () => {
+    if (!aiData.subject) {
+      toast.error("Please select a subject.");
+      return;
+    }
+    const targetCount = Number(aiData.count);
+    if (isNaN(targetCount) || targetCount <= 0 || targetCount > 500) {
+      toast.error("Please enter a valid count between 1 and 500.");
+      return;
+    }
+    
+    setIsGenerating(true);
+    setGenerationProgress(1);
+    const BATCH_SIZE = 5;
+    const totalBatches = Math.ceil(targetCount / BATCH_SIZE);
+    let generatedCount = 0;
+
+    try {
+      for (let i = 0; i < totalBatches; i++) {
+        const batchCount = Math.min(BATCH_SIZE, targetCount - i * BATCH_SIZE);
+        
+        let retries = 3;
+        let success = false;
+        let lastError = "";
+
+        while (retries > 0 && !success) {
+          try {
+            const response = await fetch('/api/generate-questions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...aiData, count: batchCount })
+            });
+            
+            let errorDetails = '';
+            if (!response.ok) {
+              errorDetails = response.statusText;
+              try {
+                const errData = await response.json();
+                if (errData.error) errorDetails = errData.error;
+              } catch (e) {}
+              throw new Error(errorDetails || `HTTP ${response.status}`);
+            }
+            
+            const textResponse = await response.text();
+            if (textResponse.trim().startsWith('<')) {
+                throw new Error("API Route misconfigured or not accessible.");
+            }
+            
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch(e) {
+                throw new Error("Invalid response JSON from server.");
+            }
+
+            if (data.questions && Array.isArray(data.questions)) {
+              const newQuestions: any[] = [];
+              data.questions.forEach((q: any) => {
+                if (!q.text || !q.options || !Array.isArray(q.options) || !q.correctAnswer) return;
+                let cleanOptions: any[] = [];
+                if (typeof q.options[0] === 'string') {
+                  cleanOptions = q.options.map((o: string, index: number) => ({ label: ['A','B','C','D'][index] || 'A', text: o }));
+                } else if (q.options[0].label) {
+                  cleanOptions = q.options.map((o: any) => ({ label: o.label, text: o.text || '' }));
+                } else {
+                  cleanOptions = q.options;
+                }
+
+                newQuestions.push({
+                  id: `q_ai_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                  examId: aiData.examId || undefined,
+                  subject: aiData.subject,
+                  topic: aiData.topic || 'General',
+                  difficulty: aiData.difficulty as any,
+                  text: q.text,
+                  options: cleanOptions,
+                  correctAnswer: q.correctAnswer,
+                  explanation: q.explanation || ''
+                });
+              });
+              
+              if (newQuestions.length > 0) {
+                await db.addQuestions(newQuestions);
+              }
+              
+              generatedCount += newQuestions.length;
+              setGenerationProgress(Math.max(5, Math.round((generatedCount / targetCount) * 100)));
+              success = true;
+            } else {
+              throw new Error("Invalid schema inside response");
+            }
+          } catch (e: any) {
+            lastError = e.message;
+            retries--;
+            if (retries > 0) {
+              await new Promise(res => setTimeout(res, 2000));
+            }
+          }
+        }
+
+        if (!success) {
+          throw new Error(`Batch ${i+1}/${totalBatches} failed after 3 retries. Error: ${lastError}`);
+        }
+      }
+      
+      toast.success(`Successfully auto-generated and saved ${generatedCount} questions!`);
+      setIsAiModalOpen(false);
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'An error occurred during generation.');
+    } finally {
+      setIsGenerating(false);
+      setGenerationProgress(0);
+    }
+  };
+
   const filteredQuestions = questions.filter(q => {
     const textMatch = q.text.toLowerCase().includes(search.toLowerCase());
     const subjectMatch = subjectFilter ? q.subject.toLowerCase() === subjectFilter.toLowerCase() : true;
@@ -121,10 +242,93 @@ export default function AdminQuestions() {
           <p className="text-sm text-slate-500 mt-1">Add, edit, import, and manage assessment questions.</p>
         </div>
         <div className="flex flex-wrap gap-2 mt-4 sm:mt-0">
+          <Button className="bg-gradient-to-r from-indigo-900 via-purple-900 to-indigo-900 hover:from-indigo-800 hover:via-purple-800 hover:to-indigo-800 text-amber-400 border border-indigo-700/50 shadow-lg shadow-indigo-900/20" onClick={() => setIsAiModalOpen(true)}>
+             <Sparkles className="w-4 h-4 mr-2 text-amber-400"/> AI Generator
+          </Button>
           <Button variant="outline" className="bg-white" onClick={handleUploadCSV}><Upload className="w-4 h-4 mr-2"/> Import CSV</Button>
           <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handleAdd}><Plus className="w-4 h-4 mr-2" /> Add Question</Button>
         </div>
       </div>
+
+      {isAiModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-start justify-center p-2 sm:p-4 bg-slate-900/80 backdrop-blur-md overflow-y-auto">
+          <div className="w-full max-w-xl relative group my-4 sm:my-8 shrink-0 flex flex-col pointer-events-none">
+            {/* Ambient Glow */}
+            <div className="absolute -inset-1 bg-gradient-to-r from-amber-500 via-purple-600 to-indigo-600 rounded-3xl blur opacity-30 group-hover:opacity-50 transition duration-1000 pointer-events-auto"></div>
+            
+            <Card className="w-full relative bg-slate-900 border border-slate-800 shadow-2xl rounded-2xl overflow-hidden pointer-events-auto">
+              <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-amber-400 via-purple-500 to-indigo-500" />
+              
+              <div className="p-8">
+                <div className="flex items-center gap-4 mb-8">
+                   <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500/20 to-purple-500/20 border border-indigo-500/30 flex items-center justify-center shrink-0 shadow-inner">
+                     <Sparkles className="w-7 h-7 text-amber-400 drop-shadow-[0_0_8px_rgba(251,191,36,0.5)]" />
+                   </div>
+                   <div>
+                     <h3 className="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-amber-200 to-amber-500">Premium AI Generator</h3>
+                     <p className="text-indigo-200/70 text-sm mt-1">Harness advanced AI to craft precise CBT questions</p>
+                   </div>
+                </div>
+                
+                <div className="space-y-6">
+                  <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Assign to Exam</label>
+                    <select value={aiData.examId} onChange={e => setAiData({ ...aiData, examId: e.target.value })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all shadow-inner">
+                      <option value="">(Optional) Select specific exam...</option>
+                      {exams.map(ex => <option key={ex.id} value={ex.id}>{ex.title}</option>)}
+                    </select>
+                  </div>
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Target Subject</label>
+                      <select value={aiData.subject} onChange={e => setAiData({ ...aiData, subject: e.target.value })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all shadow-inner">
+                        <option value="">Select subject...</option>
+                        {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject), "English", "Mathematics", "Biology", "Chemistry", "Physics"])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Focus Topic</label>
+                      <input type="text" value={aiData.topic} onChange={e => setAiData({ ...aiData, topic: e.target.value })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all shadow-inner placeholder:text-slate-600" placeholder="e.g., Quadratic Equations" />
+                    </div>
+                  </div>
+                  
+                  <div className="grid grid-cols-2 gap-6">
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Complexity Level</label>
+                      <select value={aiData.difficulty} onChange={e => setAiData({ ...aiData, difficulty: e.target.value })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all shadow-inner">
+                        <option value="easy">Introductory (Easy)</option>
+                        <option value="medium">Standard (Medium)</option>
+                        <option value="hard">Advanced (Hard)</option>
+                      </select>
+                    </div>
+                    <div className="space-y-2">
+                      <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Question Count</label>
+                      <input type="text" value={aiData.count} onChange={e => setAiData({ ...aiData, count: e.target.value.replace(/[^0-9]/g, '') })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 outline-none transition-all shadow-inner" placeholder="e.g. 10" />
+                    </div>
+                  </div>
+                </div>
+                
+                <div className="flex justify-end gap-4 mt-10 pt-6 border-t border-slate-800/80">
+                  <Button variant="ghost" className="text-slate-400 hover:text-white hover:bg-slate-800" onClick={() => setIsAiModalOpen(false)} disabled={isGenerating}>Cancel</Button>
+                  <Button className="bg-gradient-to-r from-amber-500 to-yellow-600 hover:from-amber-400 hover:to-yellow-500 text-slate-900 font-bold shadow-lg shadow-amber-500/25 border-0 px-6 py-3 h-auto min-w-[220px]" onClick={handleAiGenerate} disabled={isGenerating}>
+                    {isGenerating ? (
+                      <div className="flex flex-col items-center w-full">
+                        <div className="flex items-center text-sm">
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" /> Synthesizing...
+                        </div>
+                        <div className="w-full bg-slate-900/50 h-1.5 rounded-full mt-2 overflow-hidden shadow-inner">
+                          <div className="h-full bg-amber-400 transition-all duration-300 shadow-[0_0_8px_rgba(251,191,36,0.8)]" style={{ width: `${generationProgress}%` }}></div>
+                        </div>
+                        <div className="text-[10px] mt-1 opacity-70 font-mono tracking-widest">{generationProgress}% Complete</div>
+                      </div>
+                    ) : <><Sparkles className="w-5 h-5 mr-2" /> Generate Questions</>}
+                  </Button>
+                </div>
+              </div>
+            </Card>
+          </div>
+        </div>
+      )}
 
       {deleteModalOpen && questionToDelete && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">

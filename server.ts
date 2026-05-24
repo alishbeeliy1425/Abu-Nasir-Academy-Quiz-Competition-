@@ -19,6 +19,68 @@ async function startServer() {
     next();
   });
 
+  // AI Generation Route
+  app.post("/api/generate-questions", async (req, res) => {
+    try {
+      const { subject, topic, difficulty, count } = req.body;
+      if (!subject || !count) {
+        return res.status(400).json({ error: "Missing required fields" });
+      }
+
+      if (!process.env.GEMINI_API_KEY) {
+        return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
+      }
+
+      const { GoogleGenAI } = await import("@google/genai");
+      const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+      
+      const prompt = `Generate ${count} multiple choice CBT questions for the subject: ${subject}. 
+      ${topic ? `Topic focus: ${topic}.` : ''} 
+      Difficulty level: ${difficulty}. 
+      Make sure exactly 4 options are provided for each question, labeled A, B, C, D.
+      Provide a brief explanation for the correct answer.
+      Return the output strictly as a JSON array of objects.`;
+
+      const response = await ai.models.generateContent({
+        model: 'gemini-2.5-flash',
+        contents: prompt,
+        config: {
+          responseMimeType: 'application/json',
+          responseSchema: {
+            type: "ARRAY",
+            items: {
+                type: "OBJECT",
+                properties: {
+                    text: { type: "STRING", description: "The content of the question" },
+                    options: {
+                        type: "ARRAY",
+                        items: {
+                            type: "OBJECT",
+                            properties: {
+                                label: { type: "STRING", description: "A, B, C, or D" },
+                                text: { type: "STRING", description: "The option text" }
+                            },
+                            required: ["label", "text"]
+                        },
+                        description: "Exactly 4 options"
+                    },
+                    correctAnswer: { type: "STRING", description: "The exact label of the correct option (e.g., 'A', 'B', 'C', or 'D')" },
+                    explanation: { type: "STRING", description: "Brief explanation" }
+                },
+                required: ["text", "options", "correctAnswer", "explanation"]
+            }
+          }
+        }
+      });
+
+      const questionsData = JSON.parse(response.text);
+      res.json({ questions: questionsData });
+    } catch (error: any) {
+      console.error("AI Generation Error:", error.message || error);
+      res.status(500).json({ error: error.message || "Failed to generate questions." });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({
