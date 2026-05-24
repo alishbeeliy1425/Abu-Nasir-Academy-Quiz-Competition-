@@ -13,11 +13,50 @@ export default function AdminMonitor() {
   const [activeTab, setActiveTab] = useState<'grid' | 'list'>('grid');
   const [now, setNow] = useState(Date.now());
   const localVideoRef = useRef<HTMLVideoElement>(null);
+  const [forceSubmitTarget, setForceSubmitTarget] = useState<ExamSession | null>(null);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);
     return () => clearInterval(interval);
   }, []);
+
+  const confirmForceSubmit = () => {
+    if (!forceSubmitTarget) return;
+
+    // Calculate score
+    const qList = forceSubmitTarget.shuffledQuestions || [];
+    let score = 0;
+    qList.forEach(q => {
+      if (forceSubmitTarget.answers[q.id] === q.correctAnswer) score++;
+    });
+
+    const total = Math.max(1, qList.length);
+    const percentage = Math.round((score / total) * 100);
+    const { grade, remarks } = db.computeGrade(percentage);
+
+    const result = {
+      id: `res_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      sessionId: forceSubmitTarget.id,
+      candidateId: forceSubmitTarget.candidateId,
+      examId: forceSubmitTarget.examId,
+      score: score * 10,
+      total: total * 10,
+      grade,
+      percentage,
+      remarks,
+      date: new Date().toISOString()
+    };
+
+    const updatedSession = { 
+      ...forceSubmitTarget, 
+      status: 'completed' as const, 
+      endTime: new Date().toISOString() 
+    };
+
+    db.saveSession(updatedSession);
+    db.saveResult(result as any);
+    setForceSubmitTarget(null);
+  };
 
   // For realism, let's grab the admin's local webcam stream just to show the UI works 
   // (In real systems this would be WebRTC peer streams)
@@ -225,7 +264,14 @@ export default function AdminMonitor() {
                           </div>
                         </td>
                         <td className="p-4 text-right">
-                          <Button variant="outline" size="sm" className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50">Force Submit</Button>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            className="h-7 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                            onClick={() => setForceSubmitTarget(session)}
+                          >
+                            Force Submit
+                          </Button>
                         </td>
                       </tr>
                     )
@@ -235,6 +281,27 @@ export default function AdminMonitor() {
             </table>
           </div>
         </Card>
+      )}
+
+      {/* Force Submit Modal */}
+      {forceSubmitTarget && (
+        <div className="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-sm overflow-hidden border-0 shadow-2xl">
+            <div className="p-6 text-center">
+              <div className="w-16 h-16 bg-red-100 text-red-600 flex items-center justify-center rounded-full mx-auto mb-4">
+                <AlertTriangle className="w-8 h-8" />
+              </div>
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Force Submit?</h3>
+              <p className="text-sm text-slate-500 mb-6">
+                Are you sure you want to force submit this candidate's exam? The candidate's session will end and uncompleted questions will be marked as blank.
+              </p>
+              <div className="flex gap-3">
+                <Button variant="outline" className="flex-1" onClick={() => setForceSubmitTarget(null)}>Cancel</Button>
+                <Button className="flex-1 bg-red-600 hover:bg-red-700 text-white" onClick={confirmForceSubmit}>Confirm Submit</Button>
+              </div>
+            </div>
+          </Card>
+        </div>
       )}
     </div>
   );

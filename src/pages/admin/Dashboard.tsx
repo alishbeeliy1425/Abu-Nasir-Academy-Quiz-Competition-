@@ -47,81 +47,6 @@ const ComingSoon = ({ title }: { title: string }) => (
 
 // --- CBT MANAGEMENT --- removed as it is now in /cbt/AdminExams.tsx, etc.
 
-// --- RESULT SETTINGS (GRADING SYSTEM) ---
-const AdminResultSettings = () => {
-  const [gradingStyle, setGradingStyle] = useState('waec');
-  
-  return (
-    <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold text-slate-800">Result Settings & Grading</h2>
-        <p className="text-sm text-slate-500 mt-1">Configure computation algorithms for student scores.</p>
-      </div>
-      
-      <Card>
-        <div className="p-6 border-b border-slate-100">
-          <h3 className="text-lg font-bold">Grading System Configuration</h3>
-        </div>
-        <CardContent className="p-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-            <button 
-              onClick={() => setGradingStyle('waec')}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${gradingStyle === 'waec' ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
-            >
-              <h4 className="font-bold text-lg text-slate-800 mb-2">WAEC Style</h4>
-              <p className="text-sm text-slate-500">Standard 9-point grading system (A1, B2, B3, C4... F9).</p>
-            </button>
-            <button 
-              onClick={() => setGradingStyle('jamb')}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${gradingStyle === 'jamb' ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
-            >
-              <h4 className="font-bold text-lg text-slate-800 mb-2">JAMB Style</h4>
-              <p className="text-sm text-slate-500">400-point aggregate scoring system.</p>
-            </button>
-            <button 
-              onClick={() => setGradingStyle('custom')}
-              className={`p-6 rounded-xl border-2 text-left transition-all ${gradingStyle === 'custom' ? 'border-orange-500 bg-orange-50 ring-4 ring-orange-50' : 'border-slate-200 hover:border-orange-300'}`}
-            >
-              <h4 className="font-bold text-lg text-slate-800 mb-2">Custom School Grading</h4>
-              <p className="text-sm text-slate-500">Configure unique GPA rules and score threshold ranges.</p>
-            </button>
-          </div>
-          
-          <div className="bg-slate-50 rounded-xl pt-4">
-            <div className="flex justify-between items-center mb-4">
-              <h4 className="font-bold text-slate-700">Grading Scale Preview ({gradingStyle.toUpperCase()})</h4>
-            </div>
-            {gradingStyle === 'waec' && (
-               <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-                 {[['A1', '75-100'], ['B2', '70-74'], ['B3', '65-69'], ['C4', '60-64'], ['C5', '55-59'], ['C6', '50-54'], ['D7', '45-49'], ['E8', '40-44'], ['F9', '0-39']].map(g => (
-                   <div key={g[0]} className="bg-white p-3 rounded border border-slate-200 flex justify-between">
-                     <span className="font-bold text-blue-800">{g[0]}</span>
-                     <span className="text-slate-500 text-sm">{g[1]}%</span>
-                   </div>
-                 ))}
-               </div>
-            )}
-            {gradingStyle === 'jamb' && (
-               <div className="bg-white p-6 rounded border border-slate-200">
-                 <p className="text-slate-700">Scaling factor applied. Base score out of 100 is dynamically scaled to maximum 400 aggregate points across all 4 chosen subjects (100 pts max per subject).</p>
-               </div>
-            )}
-            {gradingStyle === 'custom' && (
-               <div className="bg-white p-6 rounded border border-slate-200 border-dashed text-center">
-                 <Button variant="outline" className="text-orange-600 border-orange-200 hover:bg-orange-50">Configure Custom Ranges</Button>
-               </div>
-            )}
-          </div>
-          <div className="mt-8 flex justify-end">
-            <Button>Save Grading Settings</Button>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
-
-
 // --- DASHBOARD HOME (ANALYTICS) ---
 const AdminHome = () => {
   const usersCount = useStore(state => (state.users || []).filter(u => u.role === 'candidate').length);
@@ -344,7 +269,7 @@ export default function AdminDashboard() {
               <Route path="cbt/subjects" element={<AdminSubjects />} />
               
               {/* Result Routes */}
-              <Route path="results/settings" element={<AdminResultSettings />} />
+              <Route path="results/settings" element={<AdminSettings defaultTab="results" />} />
               <Route path="results/term" element={<AdminResults />} />
               <Route path="results/session" element={<SessionReport />} />
               <Route path="results/student" element={<StudentReport />} />

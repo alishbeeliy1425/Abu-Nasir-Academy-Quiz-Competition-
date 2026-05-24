@@ -17,6 +17,8 @@ interface Settings {
   dashboardLogo?: string;
   loginBackground?: string;
   antiCheatingEnabled?: boolean;
+  gradingStyle?: 'waec' | 'jamb' | 'custom';
+  customGrades?: { id: string; label: string; min: number; max: number }[];
 }
 
 interface DBState {
@@ -203,6 +205,37 @@ export const db = {
   subscribe(listener: Listener) {
     listeners.add(listener);
     return () => listeners.delete(listener);
+  },
+  computeGrade(percentage: number) {
+    const settings = localState.settings;
+    let remarks = "More practice and revision are recommended for better performance.";
+    if (percentage >= 75) {
+      remarks = "Excellent performance. Keep maintaining this outstanding result.";
+    } else if (percentage >= 50) {
+      remarks = "Good effort. More focus on weaker subjects can improve overall performance.";
+    }
+
+    let grade = `${percentage}%`;
+
+    if (settings.gradingStyle === 'waec') {
+      if (percentage >= 75) grade = 'A1';
+      else if (percentage >= 70) grade = 'B2';
+      else if (percentage >= 65) grade = 'B3';
+      else if (percentage >= 60) grade = 'C4';
+      else if (percentage >= 55) grade = 'C5';
+      else if (percentage >= 50) grade = 'C6';
+      else if (percentage >= 45) grade = 'D7';
+      else if (percentage >= 40) grade = 'E8';
+      else grade = 'F9';
+    } else if (settings.gradingStyle === 'jamb') {
+      // Scale out of 400 total logic
+      grade = `${Math.round((percentage / 100) * 100)} Points`;
+    } else if (settings.gradingStyle === 'custom' && settings.customGrades) {
+      const customMatch = settings.customGrades.find(g => percentage >= g.min && percentage <= g.max);
+      if (customMatch) grade = customMatch.label;
+    }
+
+    return { grade, remarks };
   },
   getUsers() { return localState.users || []; },
   getSubjects() { return localState.subjects || []; },

@@ -163,13 +163,9 @@ export default function ExamInterface() {
       if (answers[q.id] === q.correctAnswer) score++;
     });
 
-    const percentage = Math.round((score / Math.max(1, questions.length)) * 100);
-    let remarks = "More practice and revision are recommended for better performance.";
-    if (percentage >= 75) {
-      remarks = "Excellent performance. Keep maintaining this outstanding result.";
-    } else if (percentage >= 50) {
-      remarks = "Good effort. More focus on weaker subjects can improve overall performance.";
-    }
+    const total = Math.max(1, questions.length);
+    const percentage = Math.round((score / total) * 100);
+    const { grade, remarks } = db.computeGrade(percentage);
 
     const result = {
       id: `res_${Date.now()}`,
@@ -177,8 +173,8 @@ export default function ExamInterface() {
       candidateId: user?.id || 'unknown',
       examId: examId!,
       score: score * 10,
-      total: questions.length * 10,
-      grade: `${percentage}%`,
+      total: total * 10,
+      grade,
       percentage,
       remarks,
       date: new Date().toISOString()

@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Settings, Save, RotateCcw, Download, Upload, Shield, Monitor, FileSpreadsheet, Lock } from 'lucide-react';
+import { Settings, Save, RotateCcw, Download, Upload, Shield, Monitor, FileSpreadsheet, Lock, Trash2, Plus } from 'lucide-react';
 import { db } from '../../lib/store';
 
-export default function AdminSettings() {
+export default function AdminSettings({ defaultTab = 'general' }: { defaultTab?: string }) {
   const [settings, setSettings] = useState<any>({
     websiteName: '',
     websiteDescription: '',
@@ -15,10 +15,12 @@ export default function AdminSettings() {
     autoSubmit: true,
     antiCheatingEnabled: true,
     passMark: 50,
-    darkMode: false
+    darkMode: false,
+    gradingStyle: 'waec',
+    customGrades: []
   });
 
-  const [activeTab, setActiveTab] = useState('general');
+  const [activeTab, setActiveTab] = useState(defaultTab);
 
   useEffect(() => {
     setSettings(db.getSettings());
@@ -357,6 +359,99 @@ export default function AdminSettings() {
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                   />
                   <p className="text-xs text-slate-500 mt-1">Scores below this percentage will be marked as failed.</p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 mb-8">
+                  <h4 className="text-sm font-bold text-slate-800 mb-4">Grading System Configuration</h4>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <button 
+                      onClick={() => setSettings({...settings, gradingStyle: 'waec'})}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${settings.gradingStyle === 'waec' ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
+                    >
+                      <h4 className="font-bold text-sm text-slate-800 mb-1">WAEC Style</h4>
+                      <p className="text-xs text-slate-500">Standard 9-point grading (A1, B2... F9).</p>
+                    </button>
+                    <button 
+                      onClick={() => setSettings({...settings, gradingStyle: 'jamb'})}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${settings.gradingStyle === 'jamb' ? 'border-blue-600 bg-blue-50 ring-4 ring-blue-50' : 'border-slate-200 hover:border-blue-300'}`}
+                    >
+                      <h4 className="font-bold text-sm text-slate-800 mb-1">JAMB Style</h4>
+                      <p className="text-xs text-slate-500">400-point aggregate scoring system.</p>
+                    </button>
+                    <button 
+                      onClick={() => setSettings({...settings, gradingStyle: 'custom'})}
+                      className={`p-4 rounded-xl border-2 text-left transition-all ${settings.gradingStyle === 'custom' ? 'border-orange-500 bg-orange-50 ring-4 ring-orange-50' : 'border-slate-200 hover:border-orange-300'}`}
+                    >
+                      <h4 className="font-bold text-sm text-slate-800 mb-1">Custom Grading</h4>
+                      <p className="text-xs text-slate-500">Configure unique label and score ranges.</p>
+                    </button>
+                  </div>
+
+                  {settings.gradingStyle === 'custom' && (
+                    <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                      <div className="flex justify-between items-center mb-4">
+                        <h4 className="font-bold text-slate-700 text-sm">Custom Grade Ranges</h4>
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="h-8 text-xs bg-white text-indigo-600 border-indigo-200 hover:bg-indigo-50 hover:text-indigo-700"
+                          onClick={() => {
+                            const newRanges = [...(settings.customGrades || [])];
+                            newRanges.push({ id: Math.random().toString(), label: 'New', min: 0, max: 100 });
+                            setSettings({...settings, customGrades: newRanges});
+                          }}
+                        >
+                          <Plus className="w-3.5 h-3.5 mr-1" /> Add Grade Range
+                        </Button>
+                      </div>
+                      
+                      {(!settings.customGrades || settings.customGrades.length === 0) ? (
+                         <div className="text-center p-4 text-xs text-slate-500 bg-white rounded border border-slate-200 border-dashed">
+                           No custom grades configured yet. Click "Add Grade Range".
+                         </div>
+                      ) : (
+                         <div className="space-y-3">
+                           {settings.customGrades.map((g: any, i: number) => (
+                             <div key={g.id} className="flex flex-col sm:flex-row items-center gap-3 bg-white p-3 rounded-lg border border-slate-200">
+                               <div className="flex-1 w-full">
+                                  <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block font-bold">Grade Label</label>
+                                  <input type="text" value={g.label} onChange={(e) => {
+                                      const arr = [...settings.customGrades];
+                                      arr[i].label = e.target.value;
+                                      setSettings({...settings, customGrades: arr});
+                                  }} className="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500" placeholder="e.g. Excellent, A+" />
+                               </div>
+                               <div className="w-full sm:w-24">
+                                  <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block font-bold">Min %</label>
+                                  <input type="number" value={g.min} onChange={(e) => {
+                                      const arr = [...settings.customGrades];
+                                      arr[i].min = Number(e.target.value);
+                                      setSettings({...settings, customGrades: arr});
+                                  }} className="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500" />
+                               </div>
+                               <div className="w-full sm:w-24">
+                                  <label className="text-[10px] text-slate-500 uppercase tracking-wider mb-1 block font-bold">Max %</label>
+                                  <input type="number" value={g.max} onChange={(e) => {
+                                      const arr = [...settings.customGrades];
+                                      arr[i].max = Number(e.target.value);
+                                      setSettings({...settings, customGrades: arr});
+                                  }} className="w-full text-sm border border-slate-300 rounded px-2 py-1.5 focus:ring-1 focus:ring-indigo-500" />
+                               </div>
+                               <div className="w-full sm:w-10 sm:pt-5 pt-0">
+                                  <button onClick={() => {
+                                      const arr = [...settings.customGrades];
+                                      arr.splice(i, 1);
+                                      setSettings({...settings, customGrades: arr});
+                                  }} className="w-full h-8 flex items-center justify-center text-red-500 hover:bg-red-50 border border-transparent hover:border-red-200 rounded transition-colors">
+                                     <Trash2 className="w-4 h-4" />
+                                  </button>
+                               </div>
+                             </div>
+                           ))}
+                         </div>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <div className="pt-4 border-t border-slate-100 flex items-center justify-between">
