@@ -98,21 +98,23 @@ let localState: DBState = { ...defaultDB };
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-const notify = () => {
-  localState = {
-    ...localState,
-    users: localState.users ? [...localState.users] : [],
-    subjects: localState.subjects ? [...localState.subjects] : [],
-    questions: localState.questions ? [...localState.questions] : [],
-    exams: localState.exams ? [...localState.exams] : [],
-    sessions: localState.sessions ? [...localState.sessions] : [],
-    results: localState.results ? [...localState.results] : [],
-    attendance: localState.attendance ? [...localState.attendance] : [],
-    violations: localState.violations ? [...localState.violations] : [],
-    documents: localState.documents ? [...localState.documents] : [],
-    settings: localState.settings ? { ...localState.settings } : undefined,
-  };
+const notifyDbUpdate = () => {
   listeners.forEach((l) => l());
+};
+
+const notify = () => {
+  // Rather than deep cloning every array on every notify (which destroys referential
+  // equality and causes infinite rerenders), we just notify listeners. The caller
+  // must ensure they replaced the array/object reference if they mutated it.
+  notifyDbUpdate();
+};
+
+let debounceTimer: ReturnType<typeof setTimeout> | null = null;
+const debouncedNotify = () => {
+  if (debounceTimer) clearTimeout(debounceTimer);
+  debounceTimer = setTimeout(() => {
+    notifyDbUpdate();
+  }, 100);
 };
 
 let isSynced = false;
@@ -211,20 +213,32 @@ export const syncFromSupabase = async (force = false) => {
           const list = localState[listKey] as any[];
 
           let item = payload.new;
+          let changed = false;
 
           if (payload.eventType === "INSERT") {
-            if (!list.find((i: any) => i.id === item.id)) list.push(item);
+            if (!list.find((i: any) => i.id === item.id)) {
+                (localState as any)[listKey] = [...list, item];
+                changed = true;
+            }
           } else if (payload.eventType === "UPDATE") {
             const idx = list.findIndex((i: any) => i.id === item.id);
-            if (idx >= 0) list[idx] = item;
-            else list.push(item);
+            const newList = [...list];
+            if (idx >= 0) {
+                newList[idx] = item;
+            } else {
+                newList.push(item);
+            }
+            (localState as any)[listKey] = newList;
+            changed = true;
           } else if (payload.eventType === "DELETE") {
             (localState as any)[listKey] = list.filter(
               (i: any) => i.id !== payload.old.id,
             );
+            changed = true;
           }
-          notify();
-          notify();
+          if (changed) {
+              debouncedNotify();
+          }
         };
 
         [
@@ -607,8 +621,9 @@ export const db = {
   },
 
   saveViolation(v: Violation) {
-    if (!localState.violations) localState.violations = [];
-    localState.violations.unshift(v);
+    const nextViolations = [...(localState.violations || [])];
+    nextViolations.unshift(v);
+    localState.violations = nextViolations;
     notify();
     supabase.from("violations").insert(v).then();
   },
