@@ -7,22 +7,7 @@ import { useSettings } from '../components/SettingsProvider';
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const { loginAdmin } = useAuth();
   const settings = useSettings();
-  const [showAdminModal, setShowAdminModal] = useState(false);
-  const [adminPassword, setAdminPassword] = useState('');
-  const [adminError, setAdminError] = useState('');
-
-  const handleAdminAccess = (e: React.FormEvent) => {
-    e.preventDefault();
-    setAdminError('');
-    if (loginAdmin(adminPassword)) {
-      setShowAdminModal(false);
-      navigate('/admin');
-    } else {
-      setAdminError('Incorrect Admin Access Password');
-    }
-  };
 
   return (
     <div className="min-h-screen flex flex-col font-sans relative overflow-hidden bg-gray-950">
@@ -105,65 +90,6 @@ export default function Welcome() {
           </div>
         </motion.div>
       </main>
-      
-      {/* Admin Access Modal */}
-      <AnimatePresence>
-        {showAdminModal && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center px-4 bg-gray-950/60 backdrop-blur-sm">
-            <motion.div 
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              transition={{ duration: 0.2 }}
-              className="w-full max-w-md bg-white rounded-2xl shadow-2xl overflow-hidden relative"
-            >
-              <div className="p-6">
-                <button 
-                  onClick={() => setShowAdminModal(false)}
-                  className="absolute top-4 right-4 text-gray-400 hover:text-gray-600 transition-colors"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-                
-                <div className="w-12 h-12 bg-blue-50 rounded-xl flex items-center justify-center mb-5 border border-blue-100">
-                  <Lock className="w-6 h-6 text-blue-600" />
-                </div>
-                
-                <h3 className="text-xl font-bold text-gray-900 mb-2">Secure Admin Access</h3>
-                <p className="text-sm text-gray-500 mb-6">
-                  Please enter the administrative access password to continue to the dashboard.
-                </p>
-                
-                <form onSubmit={handleAdminAccess} className="space-y-4">
-                  {adminError && (
-                    <div className="p-3 bg-red-50 text-red-600 text-sm rounded-lg border border-red-100">
-                      {adminError}
-                    </div>
-                  )}
-                  
-                  <div>
-                    <input
-                      type="password"
-                      value={adminPassword}
-                      onChange={(e) => setAdminPassword(e.target.value)}
-                      placeholder="Enter Admin Access Password"
-                      className="w-full h-11 px-4 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-600 focus:bg-white transition-all"
-                      autoFocus
-                    />
-                  </div>
-                  
-                  <button
-                    type="submit"
-                    className="w-full h-11 bg-blue-900 hover:bg-blue-800 text-white font-medium rounded-lg transition-colors flex items-center justify-center gap-2 mt-2 shadow-lg shadow-blue-900/20"
-                  >
-                    Authenticate Access
-                  </button>
-                </form>
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }

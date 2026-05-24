@@ -13,6 +13,8 @@ export default function AdminQuestions() {
   
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
+  const [page, setPage] = useState(1);
+  const itemsPerPage = 50;
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isAiModalOpen, setIsAiModalOpen] = useState(false);
@@ -395,7 +397,7 @@ export default function AdminQuestions() {
               type="text" 
               placeholder="Search questions..." 
               value={search}
-              onChange={e => setSearch(e.target.value)}
+              onChange={e => { setSearch(e.target.value); setPage(1); }}
               className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
           </div>
@@ -404,7 +406,7 @@ export default function AdminQuestions() {
              <select 
                className="flex-1 sm:w-auto px-3 py-2 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
                value={subjectFilter}
-               onChange={e => setSubjectFilter(e.target.value)}
+               onChange={e => { setSubjectFilter(e.target.value); setPage(1); }}
              >
                <option value="">All Subjects</option>
                {Array.from(new Set([...subjects.map(s => s.name), ...questions.map(q => q.subject)])).filter(Boolean).sort().map(s => <option key={s} value={s}>{s}</option>)}
@@ -432,7 +434,8 @@ export default function AdminQuestions() {
                </div>
              </div>
           ) : (
-            filteredQuestions.map((q, index) => (
+            <>
+            {filteredQuestions.slice((page - 1) * itemsPerPage, page * itemsPerPage).map((q, index) => (
               <div key={q.id} className="p-4 sm:p-6 hover:bg-slate-50/50 transition-colors">
                 <div className="flex flex-col sm:flex-row justify-between gap-4">
                   <div className="flex-1">
@@ -459,7 +462,17 @@ export default function AdminQuestions() {
                   </div>
                 </div>
               </div>
-            ))
+            ))}
+            {filteredQuestions.length > itemsPerPage && (
+              <div className="p-4 border-t border-slate-100 flex items-center justify-between">
+                 <span className="text-sm text-slate-500">Showing {(page - 1) * itemsPerPage + 1} to {Math.min(page * itemsPerPage, filteredQuestions.length)} of {filteredQuestions.length}</span>
+                 <div className="flex gap-2">
+                   <Button variant="outline" size="sm" disabled={page === 1} onClick={() => setPage(p => p - 1)}>Previous</Button>
+                   <Button variant="outline" size="sm" disabled={page * itemsPerPage >= filteredQuestions.length} onClick={() => setPage(p => p + 1)}>Next</Button>
+                 </div>
+              </div>
+            )}
+            </>
           )}
         </div>
       </Card>
