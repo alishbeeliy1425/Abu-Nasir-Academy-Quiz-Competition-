@@ -1,29 +1,19 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Search, Calendar as CalendarIcon, CheckCircle2, XCircle, AlertCircle, Edit, Trash2, Filter } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { User, AttendanceRecord, Exam } from '../../../types';
 
 export default function AdminViewAttendance() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const users = useStore(state => state.users || []);
+  const exams = useStore(state => state.exams || []);
+  const attendance = useStore(state => state.attendance || []);
   
   const [dateFilter, setDateFilter] = useState('');
   const [contextFilter, setContextFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const loadState = () => {
-      setUsers(db.get().users);
-      setExams(db.getExams());
-      setAttendance(db.getAttendance());
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
 
   const handleDelete = (id: string) => {
     if (confirm('Are you sure you want to delete this attendance record?')) {

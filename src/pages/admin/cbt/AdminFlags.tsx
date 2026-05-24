@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { ShieldAlert, AlertTriangle, Video, Search } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Violation, User, Exam } from '../../../types';
 
 export default function AdminFlags() {
-  const [violations, setViolations] = useState<Violation[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const violations = useStore(state => state.violations || []);
+  const users = useStore(state => state.users || []);
+  const exams = useStore(state => state.exams || []);
   const [searchTerm, setSearchTerm] = useState('');
-
-  useEffect(() => {
-    const loadState = () => {
-      setViolations(db.getViolations());
-      setUsers(db.get().users);
-      setExams(db.getExams());
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
 
   const filteredViolations = violations.filter(v => {
     const user = users.find(u => u.id === v.candidateId);

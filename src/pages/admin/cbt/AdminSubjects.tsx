@@ -1,24 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Subject } from '../../../types';
 import { Book, Edit, Trash2, Plus, Search } from 'lucide-react';
 
 export default function AdminSubjects() {
-  const [subjects, setSubjects] = useState<Subject[]>([]);
+  const subjects = useStore(state => state.subjects || []);
   const [search, setSearch] = useState('');
 
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [subjectToDelete, setSubjectToDelete] = useState<string | null>(null);
   const [editingSubject, setEditingSubject] = useState<Subject | null>(null);
   const [formData, setFormData] = useState({ name: '', code: '' });
-
-  useEffect(() => {
-    const loadSubjects = () => setSubjects(db.getSubjects());
-    loadSubjects();
-    return db.subscribe(loadSubjects);
-  }, []);
 
   const handleDelete = (id: string) => {
     setSubjectToDelete(id);

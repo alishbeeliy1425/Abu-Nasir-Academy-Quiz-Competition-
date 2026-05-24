@@ -1,23 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Download, UserPlus, Search, Edit, Trash2, MoreVertical, Eye, ArrowLeft, Printer, ShieldAlert, BarChart3, Clock, BookOpen, GraduationCap } from 'lucide-react';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 import { User } from '../../types';
 
 export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState('candidate');
-  const [users, setUsers] = useState<User[]>([]);
+  const users = useStore(state => state.users || []);
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const loadUsers = () => {
-      setUsers(db.get().users);
-    };
-    loadUsers();
-    return db.subscribe(loadUsers);
-  }, []);
 
   const getFilteredUsers = (role: string) => {
     return users.filter(u => 

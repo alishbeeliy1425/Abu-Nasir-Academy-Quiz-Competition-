@@ -1,26 +1,20 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useMemo } from 'react';
 import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Home, PlayCircle, FileText, Trophy } from 'lucide-react';
 import { DashboardLayout } from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 import { Exam } from '../../types';
 import { useAuth } from '../../components/AuthProvider';
 import { useSettings } from '../../components/SettingsProvider';
 
 const CandidateExams = () => {
-  const [exams, setExams] = useState<Exam[]>([]);
+  const allExams = useStore(state => state.exams || []);
+  const exams = useMemo(() => allExams.slice().reverse(), [allExams]);
   const { user } = useAuth();
   const navigate = useNavigate();
   const [now, setNow] = useState(Date.now());
-
-  useEffect(() => {
-    // Only show active or scheduled (which could be inactive as a draft)
-    const loadExams = () => setExams(db.getExams().slice().reverse());
-    loadExams();
-    return db.subscribe(loadExams);
-  }, []);
 
   useEffect(() => {
     const timer = setInterval(() => setNow(Date.now()), 1000);
@@ -194,21 +188,20 @@ const CandidateHome = () => {
 };
 
 const CandidateResults = () => {
-  const [results, setResults] = useState<any[]>([]);
+  const allResults = useStore(state => state.results || []);
+  const allExams = useStore(state => state.exams || []);
   const { user } = useAuth();
   const settings = useSettings();
   
-  useEffect(() => {
-    if (user?.id) {
-      const allRes = db.getResults().filter(r => r.candidateId === user.id);
-      const enriched = allRes.map(r => ({
-        ...r,
-        examTitle: db.getExams().find(e => e.id === r.examId)?.title || 'Unknown Exam',
-        candidatePhoto: user.photoUrl
-      }));
-      setResults(enriched);
-    }
-  }, [user]);
+  const results = useMemo(() => {
+    if (!user?.id) return [];
+    const allRes = allResults.filter(r => r.candidateId === user.id);
+    return allRes.map(r => ({
+      ...r,
+      examTitle: allExams.find(e => e.id === r.examId)?.title || 'Unknown Exam',
+      candidatePhoto: user.photoUrl
+    }));
+  }, [user, allResults, allExams]);
 
   const handlePrint = (res: any) => {
     const printWindow = window.open('', '_blank');
@@ -367,13 +360,10 @@ const CandidateResults = () => {
 };
 
 const CandidateLeaderboard = () => {
-  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const results = useStore(state => state.results || []);
+  const users = useStore(state => state.users || []);
 
-  useEffect(() => {
-    // Generate derived leaderboard from results
-    const results = db.getResults();
-    const users = db.get().users;
-    
+  const leaderboard = useMemo(() => {
     const aggregated: Record<string, { totalScore: number, examsTaken: number }> = {};
     results.forEach(r => {
       if (!aggregated[r.candidateId]) aggregated[r.candidateId] = { totalScore: 0, examsTaken: 0 };
@@ -381,7 +371,7 @@ const CandidateLeaderboard = () => {
       aggregated[r.candidateId].examsTaken += 1;
     });
 
-    const board = Object.keys(aggregated).map(cId => {
+    return Object.keys(aggregated).map(cId => {
       const user = users.find(u => u.id === cId);
       return {
         id: cId,
@@ -391,9 +381,7 @@ const CandidateLeaderboard = () => {
         exams: aggregated[cId].examsTaken
       };
     }).sort((a,b) => b.score - a.score).slice(0, 50);
-
-    setLeaderboard(board);
-  }, []);
+  }, [results, users]);
 
   return (
     <div className="space-y-6">

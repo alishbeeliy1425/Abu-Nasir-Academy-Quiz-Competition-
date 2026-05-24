@@ -1,26 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Printer, Download, Filter, Search, FileText } from 'lucide-react';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 import { Result, User, Exam } from '../../types';
 
 export default function AdminResults() {
-  const [results, setResults] = useState<Result[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const results = useStore(state => state.results || []);
+  const users = useStore(state => state.users || []);
+  const exams = useStore(state => state.exams || []);
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
-
-  useEffect(() => {
-    const loadData = () => {
-      setResults(db.getResults());
-      setUsers(db.get().users);
-      setExams(db.getExams());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const handlePrint = (res: Result, user: User, examTitle: string) => {
     const printWindow = window.open('', '_blank');

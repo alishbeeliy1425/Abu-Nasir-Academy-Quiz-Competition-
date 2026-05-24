@@ -1,23 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Search, Printer, Download, Eye, ArrowLeft, ArrowUpRight, ArrowDownRight, Award } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { User, Result } from '../../../types';
 
 export default function StudentPerformance() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
+  const allUsers = useStore(state => state.users || []);
+  const users = useMemo(() => allUsers.filter(u => u.role === 'candidate'), [allUsers]);
+  const results = useStore(state => state.results || []);
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const loadData = () => {
-      setUsers(db.get().users.filter(u => u.role === 'candidate'));
-      setResults(db.getResults());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const getStudentAnalytics = (userId: string) => {
     const studentResults = results.filter(r => r.candidateId === userId);

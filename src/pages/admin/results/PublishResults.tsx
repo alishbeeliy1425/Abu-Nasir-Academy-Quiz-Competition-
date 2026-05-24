@@ -1,25 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Search, FileText, CheckCircle, XCircle, Share2, Download } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Result, User, Exam } from '../../../types';
 
 export default function PublishResults() {
-  const [results, setResults] = useState<Result[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const results = useStore(state => state.results || []);
+  const users = useStore(state => state.users || []);
+  const exams = useStore(state => state.exams || []);
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const loadData = () => {
-      setResults(db.getResults());
-      setUsers(db.get().users);
-      setExams(db.getExams());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const [publishingId, setPublishingId] = useState<string | null>(null);
 
@@ -33,7 +23,6 @@ export default function PublishResults() {
         // implies we can control it. Let's add it ad-hoc if not present.
         (res as any).isPublished = !currentStatus;
         db.saveResult(res);
-        setResults(db.getResults());
       }
       setPublishingId(null);
     }, 400);

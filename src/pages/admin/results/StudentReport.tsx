@@ -1,26 +1,17 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Search, FileText, Download, Printer, User as UserIcon } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Result, User, Exam } from '../../../types';
 
 export default function StudentReport() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [results, setResults] = useState<Result[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const allUsers = useStore(state => state.users || []);
+  const users = useMemo(() => allUsers.filter(u => u.role === 'candidate'), [allUsers]);
+  const results = useStore(state => state.results || []);
+  const exams = useStore(state => state.exams || []);
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
-
-  useEffect(() => {
-    const loadData = () => {
-      setUsers(db.get().users.filter(u => u.role === 'candidate'));
-      setResults(db.getResults());
-      setExams(db.getExams());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 

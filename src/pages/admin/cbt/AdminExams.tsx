@@ -1,14 +1,14 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Exam } from '../../../types';
 import { Edit, Trash2, Plus, Play, Pause, Copy, BarChart2, Download, Library } from 'lucide-react';
 import { ExportModal } from '../../../components/ExportModal';
 import { QuestionBankPicker } from '../../../components/QuestionBankPicker';
 
 export default function AdminExams() {
-  const [exams, setExams] = useState<Exam[]>([]);
+  const exams = useStore(state => state.exams || []);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isExportOpen, setIsExportOpen] = useState(false);
   const [exportExamId, setExportExamId] = useState<string | undefined>(undefined);
@@ -31,12 +31,6 @@ export default function AdminExams() {
   
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [examToDelete, setExamToDelete] = useState<Exam | null>(null);
-
-  useEffect(() => {
-    const loadExams = () => setExams([...db.getExams()]);
-    loadExams();
-    return db.subscribe(loadExams);
-  }, []);
 
   const confirmDelete = (exam: Exam) => {
     setExamToDelete(exam);

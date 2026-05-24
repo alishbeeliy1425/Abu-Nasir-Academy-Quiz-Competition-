@@ -1,21 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { BarChart2, CheckCircle2, XCircle, AlertCircle, TrendingUp, Download } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { AttendanceRecord, Exam } from '../../../types';
 import { Button } from '../../../components/ui/button';
 
 export default function AdminAttendanceReports() {
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const attendance = useStore(state => state.attendance || []);
   const [today, setToday] = useState(new Date().toISOString().split('T')[0]);
-
-  useEffect(() => {
-    const loadState = () => {
-      setAttendance(db.getAttendance());
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
 
   const todayRecords = attendance.filter(a => a.date === today);
   const presentCount = todayRecords.filter(a => a.status === 'present').length;

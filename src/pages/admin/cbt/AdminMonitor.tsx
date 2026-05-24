@@ -2,27 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Monitor, ShieldAlert, CheckCircle2, RefreshCw, Video, AlertTriangle } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { ExamSession, Exam, User } from '../../../types';
 import { formatTime } from '../../../lib/utils';
 
 export default function AdminMonitor() {
-  const [sessions, setSessions] = useState<ExamSession[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
+  const sessions = useStore(state => state.sessions || []);
+  const exams = useStore(state => state.exams || []);
+  const users = useStore(state => state.users || []);
   const [activeTab, setActiveTab] = useState<'grid' | 'list'>('grid');
   const [now, setNow] = useState(Date.now());
   const localVideoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    const loadState = () => {
-      setSessions(db.getSessions());
-      setExams(db.getExams());
-      setUsers(db.get().users);
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
 
   useEffect(() => {
     const interval = setInterval(() => setNow(Date.now()), 1000);

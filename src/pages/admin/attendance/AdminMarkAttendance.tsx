@@ -1,27 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Search, Calendar as CalendarIcon, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { User, AttendanceRecord, AttendanceStatus, Exam } from '../../../types';
 
 export default function AdminMarkAttendance() {
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
-  const [attendance, setAttendance] = useState<AttendanceRecord[]>([]);
+  const allUsers = useStore(state => state.users || []);
+  const users = useMemo(() => allUsers.filter(u => u.role === 'candidate'), [allUsers]);
+  const exams = useStore(state => state.exams || []);
+  const attendance = useStore(state => state.attendance || []);
   const [date, setDate] = useState(new Date().toISOString().split('T')[0]);
   const [selectedExam, setSelectedExam] = useState<string>('general');
   const [search, setSearch] = useState('');
-
-  useEffect(() => {
-    const loadState = () => {
-      setUsers(db.get().users.filter(u => u.role === 'candidate'));
-      setExams(db.getExams());
-      setAttendance(db.getAttendance());
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
 
   const getAttendanceStatus = (candidateId: string): AttendanceStatus | null => {
     const record = attendance.find(a => a.candidateId === candidateId && a.date === date && a.subjectOrExamId === selectedExam);

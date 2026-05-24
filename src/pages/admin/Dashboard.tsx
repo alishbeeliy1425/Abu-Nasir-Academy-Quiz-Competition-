@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, Suspense } from 'react';
 import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { AnimatePresence } from 'framer-motion';
 import { motion } from 'motion/react';
@@ -10,29 +10,29 @@ import {
 import { DashboardLayout, NavItem } from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
-import AdminUsers from './AdminUsers';
-import AdminMarkAttendance from './attendance/AdminMarkAttendance';
-import AdminViewAttendance from './attendance/AdminViewAttendance';
-import AdminAttendanceReports from './attendance/AdminAttendanceReports';
+const AdminUsers = React.lazy(() => import('./AdminUsers'));
+const AdminMarkAttendance = React.lazy(() => import('./attendance/AdminMarkAttendance'));
+const AdminViewAttendance = React.lazy(() => import('./attendance/AdminViewAttendance'));
+const AdminAttendanceReports = React.lazy(() => import('./attendance/AdminAttendanceReports'));
 
-import AdminResults from './AdminResults';
-import AdminDocuments from './AdminDocuments';
+const AdminResults = React.lazy(() => import('./AdminResults'));
+const AdminDocuments = React.lazy(() => import('./AdminDocuments'));
 
-import AdminExams from './cbt/AdminExams';
-import AdminQuestions from './cbt/AdminQuestions';
-import AdminMonitor from './cbt/AdminMonitor';
-import AdminFlags from './cbt/AdminFlags';
-import AdminSubjects from './cbt/AdminSubjects';
+const AdminExams = React.lazy(() => import('./cbt/AdminExams'));
+const AdminQuestions = React.lazy(() => import('./cbt/AdminQuestions'));
+const AdminMonitor = React.lazy(() => import('./cbt/AdminMonitor'));
+const AdminFlags = React.lazy(() => import('./cbt/AdminFlags'));
+const AdminSubjects = React.lazy(() => import('./cbt/AdminSubjects'));
 
-import AdminSettings from './AdminSettings';
+const AdminSettings = React.lazy(() => import('./AdminSettings'));
 
-import SessionReport from './results/SessionReport';
-import StudentPerformance from './results/StudentPerformance';
-import PublishResults from './results/PublishResults';
-import StudentReport from './results/StudentReport';
+const SessionReport = React.lazy(() => import('./results/SessionReport'));
+const StudentPerformance = React.lazy(() => import('./results/StudentPerformance'));
+const PublishResults = React.lazy(() => import('./results/PublishResults'));
+const StudentReport = React.lazy(() => import('./results/StudentReport'));
 
 // --- STUB PAGES FOR NEW NAV MODULES ---
 const ComingSoon = ({ title }: { title: string }) => (
@@ -44,7 +44,6 @@ const ComingSoon = ({ title }: { title: string }) => (
     <p className="text-gray-500 mt-2">This module is being provisioned.</p>
   </div>
 );
-
 
 // --- CBT MANAGEMENT --- removed as it is now in /cbt/AdminExams.tsx, etc.
 
@@ -125,23 +124,19 @@ const AdminResultSettings = () => {
 
 // --- DASHBOARD HOME (ANALYTICS) ---
 const AdminHome = () => {
-  const [stats, setStats] = useState({ users: 0, exams: 0, questions: 0, liveOnline: 0, submitted: 0 });
+  const usersCount = useStore(state => state.users.filter(u => u.role === 'candidate').length);
+  const examsCount = useStore(state => state.exams.filter(e => e.status === 'active').length);
+  const questionsCount = useStore(state => state.questions.length);
+  const liveOnline = useStore(state => state.sessions?.filter(s => s.status === 'in_progress').length || 0);
+  const submitted = useStore(state => state.sessions?.filter(s => s.status === 'completed').length || 0);
 
-  useEffect(() => {
-    const loadState = () => {
-      const state = db.get();
-      const sessions = db.getSessions();
-      setStats({
-        users: state.users.filter(u => u.role === 'candidate').length,
-        exams: state.exams.filter(e => e.status === 'active').length,
-        questions: state.questions.length,
-        liveOnline: sessions.filter(s => s.status === 'in_progress').length,
-        submitted: sessions.filter(s => s.status === 'completed').length,
-      });
-    };
-    loadState();
-    return db.subscribe(loadState);
-  }, []);
+  const stats = {
+    users: usersCount,
+    exams: examsCount,
+    questions: questionsCount,
+    liveOnline,
+    submitted
+  };
 
   const handleClearDemoData = () => {
     if (confirm('Are you sure you want to clear all demo data and convert to a blank Live System?')) {
@@ -331,7 +326,8 @@ export default function AdminDashboard() {
           transition={{ duration: 0.2 }}
           className="w-full h-full"
         >
-          <Routes location={location}>
+          <Suspense fallback={<div className="flex items-center justify-center h-full p-8"><div className="w-8 h-8 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div></div>}>
+            <Routes location={location}>
               <Route path="/" element={<AdminHome />} />
               
               {/* Attendance Routes */}
@@ -366,6 +362,7 @@ export default function AdminDashboard() {
               
               <Route path="*" element={<Navigate to="" replace />} />
             </Routes>
+          </Suspense>
         </motion.div>
       </AnimatePresence>
     </DashboardLayout>

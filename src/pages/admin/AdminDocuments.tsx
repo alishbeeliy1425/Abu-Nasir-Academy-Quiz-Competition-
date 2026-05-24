@@ -1,21 +1,13 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useRef } from 'react';
 import { Card, CardContent } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { Folder, UploadCloud, FileText, Download, File, Image as ImageIcon, Trash2 } from 'lucide-react';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 
 export default function AdminDocuments() {
   const [dragActive, setDragActive] = useState(false);
-  const [docs, setDocuments] = useState<any[]>([]);
+  const docs = useStore(state => state.documents || []);
   const fileRef = useRef<HTMLInputElement>(null);
-
-  useEffect(() => {
-    const loadData = () => {
-      setDocuments(db.getDocuments());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const handleDrag = (e: React.DragEvent) => {
     e.preventDefault();

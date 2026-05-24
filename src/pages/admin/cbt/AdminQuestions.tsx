@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Question, Subject, Exam } from '../../../types';
 import { Search, Plus, Upload, Edit, Trash2, Filter, Sparkles, Loader2, Target } from 'lucide-react';
 import { CsvImportModal } from '../../../components/CsvImportModal';
 
 export default function AdminQuestions() {
-  const [questions, setQuestions] = useState<Question[]>([]);
-  const [subjects, setSubjects] = useState<Subject[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const questions = useStore(state => state.questions || []);
+  const subjects = useStore(state => state.subjects || []);
+  const exams = useStore(state => state.exams || []);
+  
   const [search, setSearch] = useState('');
   const [subjectFilter, setSubjectFilter] = useState('');
 
@@ -35,16 +36,6 @@ export default function AdminQuestions() {
     correct: 'A'
   };
   const [formData, setFormData] = useState(defaultFormData);
-
-  useEffect(() => {
-    const loadData = () => {
-      setQuestions(db.getQuestions());
-      setSubjects(db.getSubjects());
-      setExams(db.getExams());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const confirmDelete = (q: Question) => {
     setQuestionToDelete(q);

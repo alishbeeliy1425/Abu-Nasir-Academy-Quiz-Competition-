@@ -1,5 +1,6 @@
 import { User, Question, Exam, ExamSession, Result, Subject, AttendanceRecord, Violation } from '../types';
 import { supabase } from './supabase';
+import { useSyncExternalStore } from 'react';
 
 interface Settings {
   websiteName: string;
@@ -89,6 +90,7 @@ const notify = () => {
 };
 
 let isSynced = false;
+let hasSubscribed = false;
 
 
 
@@ -142,7 +144,8 @@ export const syncFromSupabase = async (force = false) => {
 
      notify();
 
-     if (!supabase.getChannels().find(c => c.topic === 'realtime:public-db-changes')) {
+     if (!hasSubscribed) {
+       hasSubscribed = true;
        // Subscribe to real-time changes
        const channel = supabase.channel('public-db-changes');
        
@@ -185,10 +188,8 @@ export const syncFromSupabase = async (force = false) => {
 
 syncFromSupabase();
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('focus', () => {
-    syncFromSupabase(true);
-  });
+export function useStore<T>(selector: (state: DBState) => T): T {
+  return useSyncExternalStore(db.subscribe, () => selector(localState));
 }
 
 export const db = {
@@ -197,16 +198,16 @@ export const db = {
     listeners.add(listener);
     return () => listeners.delete(listener);
   },
-  getUsers() { return [...(localState.users || [])]; },
-  getSubjects() { return [...(localState.subjects || [])]; },
-  getQuestions() { return [...(localState.questions || [])]; },
-  getExams() { return [...(localState.exams || [])]; },
-  getSessions() { return [...(localState.sessions || [])]; },
-  getResults() { return [...(localState.results || [])]; },
-  getSettings() { return { ...localState.settings }; },
-  getAttendance() { return [...(localState.attendance || [])]; },
-  getViolations() { return [...(localState.violations || [])]; },
-  getDocuments() { return [...(localState.documents || [])]; },
+  getUsers() { return localState.users || []; },
+  getSubjects() { return localState.subjects || []; },
+  getQuestions() { return localState.questions || []; },
+  getExams() { return localState.exams || []; },
+  getSessions() { return localState.sessions || []; },
+  getResults() { return localState.results || []; },
+  getSettings() { return localState.settings; },
+  getAttendance() { return localState.attendance || []; },
+  getViolations() { return localState.violations || []; },
+  getDocuments() { return localState.documents || []; },
 
   // Auth Helpers
   login(email: string): User | null {

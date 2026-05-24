@@ -1,25 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Card, CardContent, CardHeader } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { Download, Printer, Filter, Users, TrendingUp, BarChart3, Award } from 'lucide-react';
-import { db } from '../../../lib/store';
+import { db, useStore } from '../../../lib/store';
 import { Result, User, Exam } from '../../../types';
 
 export default function SessionReport() {
-  const [results, setResults] = useState<Result[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [exams, setExams] = useState<Exam[]>([]);
+  const results = useStore(state => state.results || []);
+  const allUsers = useStore(state => state.users || []);
+  const users = useMemo(() => allUsers.filter(u => u.role === 'candidate'), [allUsers]);
+  const exams = useStore(state => state.exams || []);
   const [sessionFilter, setSessionFilter] = useState('2025/2026');
-
-  useEffect(() => {
-    const loadData = () => {
-      setResults(db.getResults());
-      setUsers(db.get().users.filter(u => u.role === 'candidate'));
-      setExams(db.getExams());
-    };
-    loadData();
-    return db.subscribe(loadData);
-  }, []);
 
   const totalCandidates = users.length;
   const examsTaken = results.length;
