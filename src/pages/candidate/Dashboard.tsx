@@ -390,7 +390,7 @@ const CandidateLeaderboard = () => {
         Global Leaderboard
       </h2>
       <Card>
-        <CardContent className="p-0">
+        <CardContent className="p-0 overflow-x-auto">
           <table className="w-full text-sm text-left">
             <thead className="bg-gray-50 border-b">
               <tr>

@@ -124,11 +124,11 @@ const AdminResultSettings = () => {
 
 // --- DASHBOARD HOME (ANALYTICS) ---
 const AdminHome = () => {
-  const usersCount = useStore(state => state.users.filter(u => u.role === 'candidate').length);
-  const examsCount = useStore(state => state.exams.filter(e => e.status === 'active').length);
-  const questionsCount = useStore(state => state.questions.length);
-  const liveOnline = useStore(state => state.sessions?.filter(s => s.status === 'in_progress').length || 0);
-  const submitted = useStore(state => state.sessions?.filter(s => s.status === 'completed').length || 0);
+  const usersCount = useStore(state => (state.users || []).filter(u => u.role === 'candidate').length);
+  const examsCount = useStore(state => (state.exams || []).filter(e => e.status === 'active').length);
+  const questionsCount = useStore(state => (state.questions || []).length);
+  const liveOnline = useStore(state => (state.sessions || []).filter(s => s.status === 'in_progress').length || 0);
+  const submitted = useStore(state => (state.sessions || []).filter(s => s.status === 'completed').length || 0);
 
   const stats = {
     users: usersCount,

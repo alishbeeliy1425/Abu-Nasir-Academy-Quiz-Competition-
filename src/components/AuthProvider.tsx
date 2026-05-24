@@ -36,7 +36,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const loginAdmin = (password: string) => {
-    if (password === 'Abu Nasir') {
+    const trimmed = password.trim();
+    if (trimmed === 'Abu Nasir' || trimmed.toLowerCase() === 'abu nasir') {
       const adminUser: User = {
         id: 'super_admin',
         role: 'admin',

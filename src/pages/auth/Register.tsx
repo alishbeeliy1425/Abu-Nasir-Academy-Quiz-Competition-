@@ -103,7 +103,7 @@ export default function Register() {
     }
 
     const currentYear = new Date().getFullYear();
-    const candidateCount = state.users.filter(u => u.role === 'candidate').length + 1;
+    const candidateCount = (state.users || []).filter(u => u.role === 'candidate').length + 1;
     const serialNumber = `ANA${currentYear}${candidateCount.toString().padStart(3, '0')}`;
 
     // Create user

@@ -130,8 +130,9 @@ export default function AdminQuestions() {
           body: JSON.stringify({ ...aiData, count: batchCount })
         });
         
+        let errorDetails = '';
         if (!response.ok) {
-          let errorDetails = response.statusText;
+          errorDetails = response.statusText;
           try {
             const errData = await response.json();
             if (errData.error) errorDetails = errData.error;
@@ -141,7 +142,17 @@ export default function AdminQuestions() {
           throw new Error(`Batch ${i+1}/${totalBatches} failed. ${errorDetails}`);
         }
         
-        const data = await response.json();
+        const textResponse = await response.text();
+        if (textResponse.trim().startsWith('<')) {
+            throw new Error("Server not available. Please ensure the backend is running. If hosted statically, the AI generator requires a Node.js backend.");
+        }
+        
+        let data;
+        try {
+            data = JSON.parse(textResponse);
+        } catch(e) {
+            throw new Error("Invalid response format from server.");
+        }
         if (data.questions && Array.isArray(data.questions)) {
           data.questions.forEach((q: any) => {
             db.addQuestion({
@@ -249,7 +260,10 @@ export default function AdminQuestions() {
                     </div>
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Question Yield</label>
-                      <input type="number" min={1} value={aiData.count || ''} onChange={e => setAiData({ ...aiData, count: parseInt(e.target.value) || 1 })} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 outline-none transition-all shadow-inner" />
+                      <input type="number" min={1} max={500} value={aiData.count || ''} onChange={e => {
+                        let val = e.target.value;
+                        setAiData({ ...aiData, count: val === '' ? ('' as any) : parseInt(val) });
+                      }} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 outline-none transition-all shadow-inner" />
                     </div>
                   </div>
                 </div>
