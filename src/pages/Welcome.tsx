@@ -53,14 +53,6 @@ export default function Welcome() {
         
         <div className="flex items-center gap-2 sm:gap-3">
           <button 
-            onClick={() => { setAdminError(''); setAdminPassword(''); setShowAdminModal(true); }}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white text-xs font-medium border border-white/10 transition-colors"
-            title="Admin Dashboard Access"
-          >
-            <ShieldCheck className="w-4 h-4" />
-            <span className="hidden sm:inline">Admin</span>
-          </button>
-          <button 
             onClick={() => navigate('/login?role=candidate')}
             className="px-3 sm:px-4 py-1.5 text-sm font-medium text-white hover:text-gray-300 transition-colors"
           >

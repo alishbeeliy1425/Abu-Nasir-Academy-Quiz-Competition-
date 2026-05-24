@@ -11,6 +11,7 @@ import { SettingsProvider } from './components/SettingsProvider';
 // Lazy loaded routes for better performance
 const Welcome = React.lazy(() => import('./pages/Welcome'));
 const Login = React.lazy(() => import('./pages/auth/Login'));
+const AdminLogin = React.lazy(() => import('./pages/auth/AdminLogin'));
 const Register = React.lazy(() => import('./pages/auth/Register'));
 const CandidateDashboard = React.lazy(() => import('./pages/candidate/Dashboard'));
 const ExamInterface = React.lazy(() => import('./pages/candidate/ExamInterface'));
@@ -33,6 +34,14 @@ function ProtectedRoute({ children, allowedRoles }: { children: React.ReactNode,
   if (!allowedRoles.includes(user.role)) return <Navigate to="/" replace />;
   return <>{children}</>;
 }
+
+const AdminRoute = () => {
+  const { user, isLoading } = useAuth();
+  if (isLoading) return <LoadingFallback />;
+  if (user?.role === 'admin') return <AdminDashboard />;
+  if (user) return <Navigate to="/" replace />;
+  return <AdminLogin />;
+};
 
 export default function App() {
   return (
@@ -63,11 +72,7 @@ export default function App() {
                 </ProtectedRoute>
               } />
               
-              <Route path="/admin/*" element={
-                <ProtectedRoute allowedRoles={['admin']}>
-                  <AdminDashboard />
-                </ProtectedRoute>
-              } />
+              <Route path="/admin/*" element={<AdminRoute />} />
             </Routes>
           </Suspense>
         </BrowserRouter>

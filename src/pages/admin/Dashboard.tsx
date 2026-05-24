@@ -242,54 +242,45 @@ export default function AdminDashboard() {
 
   return (
     <DashboardLayout navigation={navigation}>
-      <AnimatePresence mode="wait">
-        <motion.div
-          key={location.pathname}
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          exit={{ opacity: 0 }}
-          transition={{ duration: 0.2 }}
-          className="w-full h-full"
-        >
-          <Suspense fallback={<div className="flex items-center justify-center h-full p-8"><div className="w-8 h-8 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div></div>}>
-            <Routes location={location}>
-              <Route path="/" element={<AdminHome />} />
-              
-              {/* Attendance Routes */}
-              <Route path="attendance/mark" element={<AdminMarkAttendance />} />
-              <Route path="attendance/view" element={<AdminViewAttendance />} />
-              <Route path="attendance/reports" element={<AdminAttendanceReports />} />
-              <Route path="attendance/*" element={<ComingSoon title="Attendance Analytics" />} />
-              
-              {/* CBT Routes */}
-              <Route path="cbt/exams" element={<AdminExams />} />
-              <Route path="cbt/questions" element={<AdminQuestions />} />
-              <Route path="cbt/monitor" element={<AdminMonitor />} />
-              <Route path="cbt/flags" element={<AdminFlags />} />
-              <Route path="cbt/subjects" element={<AdminSubjects />} />
-              
-              {/* Result Routes */}
-              <Route path="results/settings" element={<AdminSettings defaultTab="results" />} />
-              <Route path="results/term" element={<AdminResults />} />
-              <Route path="results/session" element={<SessionReport />} />
-              <Route path="results/student" element={<StudentReport />} />
-              <Route path="results/performance" element={<StudentPerformance />} />
-              <Route path="results/publish" element={<PublishResults />} />
-              <Route path="results/*" element={<ComingSoon title="Result Processing" />} />
+      <div className="w-full h-full">
+        <Suspense fallback={<div className="flex items-center justify-center h-full p-8"><div className="w-8 h-8 rounded-full border-4 border-blue-200 border-t-blue-600 animate-spin"></div></div>}>
+          <Routes location={location}>
+            <Route path="/" element={<AdminHome />} />
+            
+            {/* Attendance Routes */}
+            <Route path="attendance/mark" element={<AdminMarkAttendance />} />
+            <Route path="attendance/view" element={<AdminViewAttendance />} />
+            <Route path="attendance/reports" element={<AdminAttendanceReports />} />
+            <Route path="attendance/*" element={<ComingSoon title="Attendance Analytics" />} />
+            
+            {/* CBT Routes */}
+            <Route path="cbt/exams" element={<AdminExams />} />
+            <Route path="cbt/questions" element={<AdminQuestions />} />
+            <Route path="cbt/monitor" element={<AdminMonitor />} />
+            <Route path="cbt/flags" element={<AdminFlags />} />
+            <Route path="cbt/subjects" element={<AdminSubjects />} />
+            
+            {/* Result Routes */}
+            <Route path="results/settings" element={<AdminSettings defaultTab="results" />} />
+            <Route path="results/term" element={<AdminResults />} />
+            <Route path="results/session" element={<SessionReport />} />
+            <Route path="results/student" element={<StudentReport />} />
+            <Route path="results/performance" element={<StudentPerformance />} />
+            <Route path="results/publish" element={<PublishResults />} />
+            <Route path="results/*" element={<ComingSoon title="Result Processing" />} />
 
-              {/* User Routes */}
-              <Route path="users/students" element={<AdminUsers />} />
-              <Route path="users/*" element={<ComingSoon title="User Portals" />} />
+            {/* User Routes */}
+            <Route path="users/students" element={<AdminUsers />} />
+            <Route path="users/*" element={<ComingSoon title="User Portals" />} />
 
-              {/* Others */}
-              <Route path="documents" element={<AdminDocuments />} />
-              <Route path="settings" element={<AdminSettings />} />
-              
-              <Route path="*" element={<Navigate to="" replace />} />
-            </Routes>
-          </Suspense>
-        </motion.div>
-      </AnimatePresence>
+            {/* Others */}
+            <Route path="documents" element={<AdminDocuments />} />
+            <Route path="settings" element={<AdminSettings />} />
+            
+            <Route path="*" element={<Navigate to="" replace />} />
+          </Routes>
+        </Suspense>
+      </div>
     </DashboardLayout>
   );
 }
