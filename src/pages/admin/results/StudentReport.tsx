@@ -182,7 +182,7 @@ export default function StudentReport() {
             <Card className="w-full max-w-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="font-bold text-slate-800">Result Slip</h3>
-                <Button variant="ghost" size="icon" onClick={() => setViewingSlip(null)}>
+                <Button variant="ghost" size="sm" onClick={() => setViewingSlip(null)} className="h-9 w-9 p-0">
                   <X className="w-5 h-5 text-slate-500" />
                 </Button>
               </div>

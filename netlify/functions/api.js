@@ -58,7 +58,8 @@ export const handler = async (event) => {
       }
     });
 
-    const rawText = response.text || "[]";
+    let rawText = response.text || "[]";
+    rawText = rawText.replace(/^```json/g, "").replace(/```$/g, "").trim();
     const questionsData = JSON.parse(rawText);
 
     return {
@@ -70,7 +71,8 @@ export const handler = async (event) => {
     console.error("AI Generation Error:", error);
     return {
       statusCode: 500,
-      body: JSON.stringify({ error: "Failed to generate questions." })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Failed to generate questions. Model timeout or error." })
     };
   }
 };

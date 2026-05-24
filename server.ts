@@ -44,7 +44,7 @@ async function startServer() {
       Provide a brief explanation for the correct answer.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
+        model: "gemini-3.1-pro-preview",
         contents: prompt,
         config: {
           responseMimeType: "application/json",

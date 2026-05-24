@@ -7,6 +7,7 @@ import React, { Suspense } from "react";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { SettingsProvider } from "./components/SettingsProvider";
+import { ErrorBoundary } from "./components/ErrorBoundary";
 
 // Lazy loaded routes for better performance
 const Welcome = React.lazy(() => import("./pages/Welcome"));
@@ -57,12 +58,13 @@ const AdminRoute = () => {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <SettingsProvider>
-        <BrowserRouter>
-          <Suspense fallback={<LoadingFallback />}>
-            <Routes>
-              <Route path="/" element={<Welcome />} />
+    <ErrorBoundary>
+      <AuthProvider>
+        <SettingsProvider>
+          <BrowserRouter>
+            <Suspense fallback={<LoadingFallback />}>
+              <Routes>
+                <Route path="/" element={<Welcome />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
 
@@ -99,5 +101,6 @@ export default function App() {
         </BrowserRouter>
       </SettingsProvider>
     </AuthProvider>
+    </ErrorBoundary>
   );
 }

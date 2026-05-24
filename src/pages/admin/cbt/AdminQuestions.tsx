@@ -118,8 +118,8 @@ export default function AdminQuestions() {
     }
     
     setIsGenerating(true);
-    setGenerationProgress(0);
-    const BATCH_SIZE = 10;
+    setGenerationProgress(1); // Set to 1 to show preparing
+    const BATCH_SIZE = 5; // Reduced from 10 to avoid Netlify/Vercel timeout limits
     const totalBatches = Math.ceil(targetCount / BATCH_SIZE);
     let generatedCount = 0;
 
@@ -127,53 +127,81 @@ export default function AdminQuestions() {
       for (let i = 0; i < totalBatches; i++) {
         const batchCount = Math.min(BATCH_SIZE, targetCount - i * BATCH_SIZE);
         
-        const response = await fetch('/api/generate-questions', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ ...aiData, count: batchCount })
-        });
-        
-        let errorDetails = '';
-        if (!response.ok) {
-          errorDetails = response.statusText;
+        let retries = 3;
+        let success = false;
+        let lastError = "";
+
+        while (retries > 0 && !success) {
           try {
-            const errData = await response.json();
-            if (errData.error) errorDetails = errData.error;
-          } catch (e) {
-            // ignore
-          }
-          throw new Error(`Batch ${i+1}/${totalBatches} failed. ${errorDetails}`);
-        }
-        
-        const textResponse = await response.text();
-        if (textResponse.trim().startsWith('<')) {
-            throw new Error("Server not available. Please ensure the backend is running. If hosted statically, the AI generator requires a Node.js backend.");
-        }
-        
-        let data;
-        try {
-            data = JSON.parse(textResponse);
-        } catch(e) {
-            throw new Error("Invalid response format from server.");
-        }
-        if (data.questions && Array.isArray(data.questions)) {
-          data.questions.forEach((q: any) => {
-            db.addQuestion({
-              id: `q_ai_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-              examId: aiData.examId || undefined,
-              subject: aiData.subject,
-              topic: aiData.topic || 'General',
-              difficulty: aiData.difficulty as any,
-              text: q.text,
-              options: q.options,
-              correctAnswer: q.correctAnswer,
-              explanation: q.explanation
+            const response = await fetch('/api/generate-questions', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ ...aiData, count: batchCount })
             });
-          });
-          generatedCount += data.questions.length;
-          setGenerationProgress(Math.round((generatedCount / aiData.count) * 100));
-        } else {
-          throw new Error("Invalid response format");
+            
+            let errorDetails = '';
+            if (!response.ok) {
+              errorDetails = response.statusText;
+              try {
+                const errData = await response.json();
+                if (errData.error) errorDetails = errData.error;
+              } catch (e) {}
+              throw new Error(errorDetails || `HTTP ${response.status}`);
+            }
+            
+            const textResponse = await response.text();
+            if (textResponse.trim().startsWith('<')) {
+                throw new Error("API Route misconfigured or not accessible.");
+            }
+            
+            let data;
+            try {
+                data = JSON.parse(textResponse);
+            } catch(e) {
+                throw new Error("Invalid response JSON from server.");
+            }
+
+            if (data.questions && Array.isArray(data.questions)) {
+              data.questions.forEach((q: any) => {
+                if (!q.text || !q.options || !Array.isArray(q.options) || !q.correctAnswer) return;
+                let cleanOptions: any[] = [];
+                if (typeof q.options[0] === 'string') {
+                  cleanOptions = q.options.map((o: string, index: number) => ({ id: ['A','B','C','D'][index] || 'A', text: o }));
+                } else if (q.options[0].label) {
+                  cleanOptions = q.options.map((o: any) => ({ id: o.label, text: o.text || '' }));
+                } else {
+                  cleanOptions = q.options;
+                }
+
+                db.addQuestion({
+                  id: `q_ai_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
+                  examId: aiData.examId || undefined,
+                  subject: aiData.subject,
+                  topic: aiData.topic || 'General',
+                  difficulty: aiData.difficulty as any,
+                  text: q.text,
+                  options: cleanOptions,
+                  correctAnswer: q.correctAnswer,
+                  explanation: q.explanation || ''
+                });
+              });
+              generatedCount += data.questions.length;
+              setGenerationProgress(Math.max(5, Math.round((generatedCount / aiData.count) * 100)));
+              success = true;
+            } else {
+              throw new Error("Invalid schema inside response");
+            }
+          } catch (e: any) {
+            lastError = e.message;
+            retries--;
+            if (retries > 0) {
+              await new Promise(res => setTimeout(res, 2000));
+            }
+          }
+        }
+
+        if (!success) {
+          throw new Error(`Batch ${i+1}/${totalBatches} failed after 3 retries. Error: ${lastError}`);
         }
       }
       
