@@ -62,10 +62,15 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
     }
   };
 
+  const normalizeHeader = (header: string) => {
+    return header.toLowerCase().replace(/[^a-z0-9]/g, '');
+  };
+
   const parseFile = (file: File) => {
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
+      transformHeader: normalizeHeader,
       complete: (results) => {
         if (results.errors.length > 0 && results.data.length === 0) {
           setError("Failed to parse CSV. Please check the format.");
@@ -75,7 +80,55 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
           setError("The CSV file is empty.");
           return;
         }
-        setCsvData(results.data);
+
+        // Map normalized data to expected format
+        const mappedData = results.data.map((row: any) => {
+          return {
+            subject: row.subject || '',
+            examId: row.examid || '',
+            topic: row.topic || '',
+            difficulty: row.difficulty || 'medium',
+            text: row.text || row.question || '',
+            optionA: row.optiona || row.a || '',
+            optionB: row.optionb || row.b || '',
+            optionC: row.optionc || row.c || '',
+            optionD: row.optiond || row.d || '',
+            correctAnswer: row.correctanswer || row.answer || '',
+            explanation: row.explanation || ''
+          };
+        }).filter(row => row.subject || row.text || row.optionA); // Keep rows that have at least some data
+
+        // Validate and filter
+        const validData = [];
+        let missingCols = false;
+        let invalidAnswers = false;
+
+        for (const row of mappedData) {
+          if (!row.subject || !row.text || !row.optionA || !row.optionB || !row.correctAnswer) {
+            missingCols = true;
+          }
+          
+          if (row.correctAnswer && !['A', 'B', 'C', 'D'].includes(row.correctAnswer?.toUpperCase())) {
+            invalidAnswers = true;
+          }
+          
+          if (row.subject && row.text && row.optionA && row.optionB && row.correctAnswer) {
+             validData.push(row);
+          }
+        }
+
+        if (validData.length === 0) {
+           if (missingCols) {
+             setError("Missing required standard columns (Subject, Question, Option A, Option B, Correct Answer).");
+           } else if (invalidAnswers) {
+             setError("Invalid correct answer detected. Must be A, B, C, or D.");
+           } else {
+             setError("Could not find any valid questions in this CSV.");
+           }
+           return;
+        }
+
+        setCsvData(validData);
         setStep(2);
       },
       error: (err) => {
@@ -91,10 +144,15 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
     let errors = 0;
     const existingQuestions = db.getQuestions();
     
-    // Process in batches incrementally to show progress optionally (or just fast)
+    setImportProgress(10);
+    const newQuestions = [];
+    
+    // Simulate delay for premium feel
+    await new Promise(r => setTimeout(r, 600));
+    setImportProgress(40);
+    
     for (let i = 0; i < csvData.length; i++) {
        const row = csvData[i];
-       setImportProgress(Math.round(((i + 1) / csvData.length) * 100));
        
        if (!row.subject || !row.text || !row.optionA || !row.optionB || !row.correctAnswer) {
          errors++;
@@ -125,10 +183,24 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
          explanation: row.explanation || ''
        };
        
-       db.addQuestion(newQ);
-       success++;
+       newQuestions.push(newQ);
     }
     
+    setImportProgress(70);
+    await new Promise(r => setTimeout(r, 600));
+    
+    if (newQuestions.length > 0) {
+      try {
+        await db.addQuestions(newQuestions);
+        success = newQuestions.length;
+      } catch (err) {
+        console.error("Failed to import bulk questions via addQuestions", err);
+        errors += newQuestions.length;
+      }
+    }
+    
+    setImportProgress(100);
+    await new Promise(r => setTimeout(r, 300));
     setImportStats({ success, dups, errors });
   };
 
@@ -226,12 +298,17 @@ export function CsvImportModal({ isOpen, onClose, onImportComplete }: CsvImportM
         {step === 3 && (
           <div className="p-10 text-center">
              {importProgress < 100 ? (
-                <div className="py-12">
-                   <h3 className="text-xl font-bold text-slate-800 mb-6">Processing...</h3>
-                   <div className="w-full max-w-sm bg-slate-100 h-3 rounded-full overflow-hidden mx-auto">
-                     <div className="h-full bg-blue-600 transition-all duration-300" style={{ width: `${importProgress}%` }}></div>
+                <div className="py-12 flex flex-col items-center">
+                   <div className="relative w-20 h-20 mb-6">
+                     <div className="absolute inset-0 border-4 border-blue-100 rounded-full"></div>
+                     <div className="absolute inset-0 border-4 border-blue-600 rounded-full border-t-transparent animate-spin"></div>
+                     <FileSpreadsheet className="w-8 h-8 text-blue-600 absolute inset-0 m-auto animate-pulse" />
                    </div>
-                   <p className="text-sm font-medium text-slate-500 mt-4">{importProgress}% Complete</p>
+                   <h3 className="text-2xl font-bold text-slate-800 mb-4">Parsing & Validating...</h3>
+                   <div className="w-full max-w-md bg-slate-100 h-3 rounded-full overflow-hidden mx-auto shadow-inner">
+                     <div className="h-full bg-gradient-to-r from-blue-500 to-indigo-600 transition-all duration-500 rounded-full shadow-[0_0_10px_rgba(79,70,229,0.5)]" style={{ width: `${importProgress}%` }}></div>
+                   </div>
+                   <p className="text-sm font-semibold text-slate-500 mt-4 font-mono tracking-widest">{importProgress}% SYSTEM SYNC</p>
                 </div>
              ) : (
                 <div className="py-6">
