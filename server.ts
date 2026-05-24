@@ -1,7 +1,6 @@
 import express from "express";
 import path from "path";
 import { createServer as createViteServer } from "vite";
-import { GoogleGenAI, Type } from "@google/genai";
 import dotenv from "dotenv";
 
 dotenv.config();
@@ -32,52 +31,79 @@ async function startServer() {
         return res.status(500).json({ error: "GEMINI_API_KEY is not configured on the server." });
       }
 
-      const ai = new GoogleGenAI({ 
-        apiKey: process.env.GEMINI_API_KEY,
-        httpOptions: { headers: { 'User-Agent': 'aistudio-build' } }
-      });
-
       const prompt = `Generate ${count} multiple choice CBT questions for the subject: ${subject}. 
       ${topic ? `Topic focus: ${topic}.` : ''} 
       Difficulty level: ${difficulty}. 
       Make sure exactly 4 options are provided for each question, labeled A, B, C, D.
       Provide a brief explanation for the correct answer.`;
 
-      const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
-        contents: prompt,
-        config: {
+      const requestBody = {
+        contents: [{ parts: [{ text: prompt }] }],
+        generationConfig: {
           responseMimeType: "application/json",
           responseSchema: {
-            type: Type.ARRAY,
+            type: "ARRAY",
             items: {
-              type: Type.OBJECT,
+              type: "OBJECT",
               properties: {
-                text: { type: Type.STRING, description: "The content of the question" },
+                text: { type: "STRING", description: "The content of the question" },
                 options: {
-                  type: Type.ARRAY,
+                  type: "ARRAY",
                   items: {
-                    type: Type.OBJECT,
+                    type: "OBJECT",
                     properties: {
-                      label: { type: Type.STRING, description: "A, B, C, or D" },
-                      text: { type: Type.STRING, description: "The option text" },
+                      label: { type: "STRING", description: "A, B, C, or D" },
+                      text: { type: "STRING", description: "The option text" }
                     },
                     required: ["label", "text"]
                   },
                   description: "Exactly 4 options"
                 },
-                correctAnswer: { type: Type.STRING, description: "The exact label of the correct option (e.g., 'A', 'B', 'C', or 'D')" },
-                explanation: { type: Type.STRING, description: "Brief explanation" }
+                correctAnswer: { type: "STRING", description: "The exact label of the correct option (e.g., 'A', 'B', 'C', or 'D')" },
+                explanation: { type: "STRING", description: "Brief explanation" }
               },
               required: ["text", "options", "correctAnswer", "explanation"]
             }
           }
         }
+      };
+
+      const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash:generateContent?key=${process.env.GEMINI_API_KEY}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(requestBody)
       });
 
-      let rawText = response.text || "[]";
-      rawText = rawText.replace(/^```json/g, "").replace(/```$/g, "").trim();
-      const questionsData = JSON.parse(rawText);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error("Gemini API Error:", errorText);
+        let errorMsg = "Failed to generate questions.";
+        try {
+          const errObj = JSON.parse(errorText);
+          if (errObj.error && errObj.error.message) {
+            errorMsg = errObj.error.message;
+          }
+        } catch(e) {}
+        return res.status(500).json({ error: errorMsg });
+      }
+
+      const data = await response.json();
+      let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "[]";
+      const startIdx = rawText.indexOf('[');
+      const endIdx = rawText.lastIndexOf(']');
+      if (startIdx !== -1 && endIdx !== -1 && endIdx >= startIdx) {
+        rawText = rawText.substring(startIdx, endIdx + 1);
+      }
+      
+      let questionsData = [];
+      try {
+        questionsData = JSON.parse(rawText);
+      } catch (e) {
+        console.error("Failed to parse array:", rawText);
+        throw new Error("Invalid format from AI");
+      }
 
       res.json({ questions: questionsData });
     } catch (error) {

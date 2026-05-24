@@ -8,6 +8,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import { AuthProvider, useAuth } from "./components/AuthProvider";
 import { SettingsProvider } from "./components/SettingsProvider";
 import { ErrorBoundary } from "./components/ErrorBoundary";
+import { Toaster } from 'sonner';
 
 // Lazy loaded routes for better performance
 const Welcome = React.lazy(() => import("./pages/Welcome"));
@@ -59,6 +60,7 @@ const AdminRoute = () => {
 export default function App() {
   return (
     <ErrorBoundary>
+      <Toaster position="top-right" richColors />
       <AuthProvider>
         <SettingsProvider>
           <BrowserRouter>

@@ -5,6 +5,7 @@ import { db, useStore } from '../../../lib/store';
 import { Question, Subject, Exam } from '../../../types';
 import { Search, Plus, Upload, Edit, Trash2, Filter, Sparkles, Loader2, Target } from 'lucide-react';
 import { CsvImportModal } from '../../../components/CsvImportModal';
+import { toast } from 'sonner';
 
 export default function AdminQuestions() {
   const questions = useStore(state => state.questions || []);
@@ -26,7 +27,7 @@ export default function AdminQuestions() {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [questionToDelete, setQuestionToDelete] = useState<Question | null>(null);
 
-  const [aiData, setAiData] = useState({ examId: '', subject: '', topic: '', difficulty: 'medium', count: 5 });
+  const [aiData, setAiData] = useState({ examId: '', subject: '', topic: '', difficulty: 'medium', count: '5' });
   
   const defaultFormData = { 
     examId: '',
@@ -77,7 +78,7 @@ export default function AdminQuestions() {
 
   const handleSave = () => {
     if (!formData.text || !formData.subject || !formData.optA || !formData.optB) {
-      alert("Please fill in the question text, subject, and at least two options.");
+      toast.error("Please fill in the question text, subject, and at least two options.");
       return;
     }
 
@@ -98,8 +99,13 @@ export default function AdminQuestions() {
       explanation: ''
     };
     
-    db.addQuestion(updated);
-    setIsModalOpen(false);
+    try {
+      db.addQuestion(updated);
+      toast.success(editingQuestion ? "Question updated successfully" : "Question saved successfully");
+      setIsModalOpen(false);
+    } catch (e: any) {
+      toast.error("Failed to save question");
+    }
   };
 
   const handleUploadCSV = () => {
@@ -108,18 +114,18 @@ export default function AdminQuestions() {
 
   const handleAiGenerate = async () => {
     if (!aiData.subject) {
-      alert("Please select a subject.");
+      toast.error("Please select a subject.");
       return;
     }
     const targetCount = Number(aiData.count) || 0;
-    if (targetCount <= 0) {
-      alert("Please enter a valid count.");
+    if (targetCount <= 0 || targetCount > 500) {
+      toast.error("Please enter a valid count between 1 and 500.");
       return;
     }
     
     setIsGenerating(true);
     setGenerationProgress(1); // Set to 1 to show preparing
-    const BATCH_SIZE = 5; // Reduced from 10 to avoid Netlify/Vercel timeout limits
+    const BATCH_SIZE = 3; // Reduced to 3 to avoid Netlify/Vercel timeout limits
     const totalBatches = Math.ceil(targetCount / BATCH_SIZE);
     let generatedCount = 0;
 
@@ -162,18 +168,19 @@ export default function AdminQuestions() {
             }
 
             if (data.questions && Array.isArray(data.questions)) {
+              const newQuestions: any[] = [];
               data.questions.forEach((q: any) => {
                 if (!q.text || !q.options || !Array.isArray(q.options) || !q.correctAnswer) return;
                 let cleanOptions: any[] = [];
                 if (typeof q.options[0] === 'string') {
-                  cleanOptions = q.options.map((o: string, index: number) => ({ id: ['A','B','C','D'][index] || 'A', text: o }));
+                  cleanOptions = q.options.map((o: string, index: number) => ({ label: ['A','B','C','D'][index] || 'A', text: o }));
                 } else if (q.options[0].label) {
-                  cleanOptions = q.options.map((o: any) => ({ id: o.label, text: o.text || '' }));
+                  cleanOptions = q.options.map((o: any) => ({ label: o.label, text: o.text || '' }));
                 } else {
                   cleanOptions = q.options;
                 }
 
-                db.addQuestion({
+                newQuestions.push({
                   id: `q_ai_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
                   examId: aiData.examId || undefined,
                   subject: aiData.subject,
@@ -185,8 +192,13 @@ export default function AdminQuestions() {
                   explanation: q.explanation || ''
                 });
               });
-              generatedCount += data.questions.length;
-              setGenerationProgress(Math.max(5, Math.round((generatedCount / aiData.count) * 100)));
+              
+              if (newQuestions.length > 0) {
+                await db.addQuestions(newQuestions);
+              }
+              
+              generatedCount += newQuestions.length;
+              setGenerationProgress(Math.max(5, Math.round((generatedCount / Number(aiData.count)) * 100)));
               success = true;
             } else {
               throw new Error("Invalid schema inside response");
@@ -205,11 +217,11 @@ export default function AdminQuestions() {
         }
       }
       
-      alert(`Successfully auto-generated and saved ${generatedCount} questions!`);
+      toast.success(`Successfully auto-generated and saved ${generatedCount} questions!`);
       setIsAiModalOpen(false);
     } catch (err: any) {
       console.error(err);
-      alert(err.message || 'An error occurred during generation.');
+      toast.error(err.message || 'An error occurred during generation.');
     } finally {
       setIsGenerating(false);
       setGenerationProgress(0);
@@ -292,7 +304,7 @@ export default function AdminQuestions() {
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Question Yield</label>
                       <input type="number" min={1} max={500} value={aiData.count} onChange={e => {
-                        setAiData({ ...aiData, count: e.target.value as any });
+                        setAiData({ ...aiData, count: e.target.value });
                       }} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 outline-none transition-all shadow-inner" />
                     </div>
                   </div>

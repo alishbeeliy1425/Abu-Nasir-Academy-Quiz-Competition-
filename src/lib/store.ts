@@ -341,9 +341,11 @@ export const db = {
   },
 
   addUser(u: User) {
-    const idx = localState.users.findIndex((x) => x.id === u.id);
-    if (idx >= 0) localState.users[idx] = u;
-    else localState.users.push(u);
+    const nextUsers = [...(localState.users || [])];
+    const idx = nextUsers.findIndex((x) => x.id === u.id);
+    if (idx >= 0) nextUsers[idx] = u;
+    else nextUsers.push(u);
+    localState.users = nextUsers;
     notify();
     supabase
       .from("users")
@@ -360,9 +362,11 @@ export const db = {
   },
 
   saveSubject(s: Subject) {
-    const idx = (localState.subjects || []).findIndex((x) => x.id === s.id);
-    if (idx >= 0) localState.subjects[idx] = s;
-    else localState.subjects.push(s);
+    const nextSubjects = [...(localState.subjects || [])];
+    const idx = nextSubjects.findIndex((x) => x.id === s.id);
+    if (idx >= 0) nextSubjects[idx] = s;
+    else nextSubjects.push(s);
+    localState.subjects = nextSubjects;
     notify();
     supabase.from("subjects").upsert(s).then();
   },
@@ -373,9 +377,11 @@ export const db = {
   },
 
   addQuestion(q: Question) {
-    const idx = localState.questions.findIndex((x) => x.id === q.id);
-    if (idx >= 0) localState.questions[idx] = q;
-    else localState.questions.push(q);
+    const nextQuestions = [...(localState.questions || [])];
+    const idx = nextQuestions.findIndex((x) => x.id === q.id);
+    if (idx >= 0) nextQuestions[idx] = q;
+    else nextQuestions.push(q);
+    localState.questions = nextQuestions;
     notify();
     supabase
       .from("questions")
@@ -384,6 +390,26 @@ export const db = {
         if (r.error) console.error("Question Insert Error:", r.error);
       });
   },
+  
+  async addQuestions(qs: Question[]) {
+    if (!qs.length) return;
+    
+    const nextQuestions = [...(localState.questions || [])];
+    qs.forEach((q) => {
+      const idx = nextQuestions.findIndex((x) => x.id === q.id);
+      if (idx >= 0) nextQuestions[idx] = q;
+      else nextQuestions.push(q);
+    });
+    localState.questions = nextQuestions;
+    notify();
+    
+    // Batch upsert to Supabase
+    const { error } = await supabase.from("questions").upsert(qs);
+    if (error) {
+      console.error("Batch Questions Insert Error:", error);
+      throw new Error("Failed to sync to database: " + error.message);
+    }
+  },
   deleteQuestion(id: string) {
     localState.questions = localState.questions.filter((q) => q.id !== id);
     notify();
@@ -391,9 +417,11 @@ export const db = {
   },
 
   addExam(e: Exam) {
-    const idx = (localState.exams || []).findIndex((x) => x.id === e.id);
-    if (idx >= 0) localState.exams[idx] = e;
-    else localState.exams.push(e);
+    const nextExams = [...(localState.exams || [])];
+    const idx = nextExams.findIndex((x) => x.id === e.id);
+    if (idx >= 0) nextExams[idx] = e;
+    else nextExams.push(e);
+    localState.exams = nextExams;
     notify();
 
     const dbExam = {
@@ -521,19 +549,21 @@ export const db = {
   },
 
   saveSession(session: ExamSession) {
-    if (!localState.sessions) localState.sessions = [];
-    const idx = localState.sessions.findIndex((s) => s.id === session.id);
-    if (idx >= 0) localState.sessions[idx] = session;
-    else localState.sessions.push(session);
+    const nextSessions = [...(localState.sessions || [])];
+    const idx = nextSessions.findIndex((s) => s.id === session.id);
+    if (idx >= 0) nextSessions[idx] = session;
+    else nextSessions.push(session);
+    localState.sessions = nextSessions;
     notify();
     supabase.from("exam_sessions").upsert(session).then();
   },
 
   saveResult(r: Result) {
-    if (!localState.results) localState.results = [];
-    const idx = localState.results.findIndex((x) => x.id === r.id);
-    if (idx >= 0) localState.results[idx] = r;
-    else localState.results.push(r);
+    const nextResults = [...(localState.results || [])];
+    const idx = nextResults.findIndex((x) => x.id === r.id);
+    if (idx >= 0) nextResults[idx] = r;
+    else nextResults.push(r);
+    localState.results = nextResults;
     notify();
     supabase.from("results").upsert(r).then();
   },
@@ -558,10 +588,11 @@ export const db = {
   },
 
   saveAttendance(record: AttendanceRecord) {
-    if (!localState.attendance) localState.attendance = [];
-    const idx = localState.attendance.findIndex((a) => a.id === record.id);
-    if (idx >= 0) localState.attendance[idx] = record;
-    else localState.attendance.push(record);
+    const nextAttendance = [...(localState.attendance || [])];
+    const idx = nextAttendance.findIndex((a) => a.id === record.id);
+    if (idx >= 0) nextAttendance[idx] = record;
+    else nextAttendance.push(record);
+    localState.attendance = nextAttendance;
     notify();
     supabase.from("attendance").upsert(record).then();
   },
@@ -596,8 +627,9 @@ export const db = {
   },
 
   addDocument(doc: any) {
-    if (!localState.documents) localState.documents = [];
-    localState.documents.push(doc);
+    const nextDocuments = [...(localState.documents || [])];
+    nextDocuments.push(doc);
+    localState.documents = nextDocuments;
     notify();
     supabase
       .from("documents")
