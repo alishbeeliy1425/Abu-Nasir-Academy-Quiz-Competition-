@@ -4,7 +4,21 @@ import { db, useStore } from '../lib/store';
 const SettingsContext = createContext<ReturnType<typeof db.getSettings>>(db.getSettings());
 
 export function SettingsProvider({ children }: { children: React.ReactNode }) {
-  const settings = useStore(state => state.settings);
+  const currentSettings = useStore(state => state.settings);
+  const settings = currentSettings || db.getSettings() || {
+    websiteName: 'Abu Nasir Academy CBT',
+    websiteDescription: 'Official CBT Platform',
+    contactEmail: 'admin@abunasir.edu',
+    contactPhone: '+1234567890',
+    address: '123 Academy Way',
+    defaultExamDuration: 60,
+    autoSubmit: true,
+    passMark: 50,
+    darkMode: false,
+    antiCheatingEnabled: true,
+    gradingStyle: 'waec',
+    customGrades: []
+  };
 
   useEffect(() => {
     // Apply website name

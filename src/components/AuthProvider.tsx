@@ -18,8 +18,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     const initializeAuth = async () => {
-      const savedUserId = localStorage.getItem('abunasir_auth_id');
-      const isAdmin = localStorage.getItem('abunasir_admin_auth') === 'true';
+      let savedUserId: string | null = null;
+      let isAdmin = false;
+      try {
+        savedUserId = localStorage.getItem('abunasir_auth_id');
+        isAdmin = localStorage.getItem('abunasir_admin_auth') === 'true';
+      } catch (err) {
+        console.warn('localStorage is restricted', err);
+      }
       
       if (isAdmin && savedUserId === 'super_admin') {
         setUser({
@@ -64,8 +70,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         email: 'admin@system'
       };
       setUser(adminUser);
-      localStorage.setItem('abunasir_auth_id', 'super_admin');
-      localStorage.setItem('abunasir_admin_auth', 'true');
+      try {
+        localStorage.setItem('abunasir_auth_id', 'super_admin');
+        localStorage.setItem('abunasir_admin_auth', 'true');
+      } catch (e) {}
       return true;
     }
     return false;
@@ -75,8 +83,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const foundUser = db.login(email);
     if (foundUser && foundUser.role !== 'admin') {
       setUser(foundUser);
-      localStorage.setItem('abunasir_auth_id', foundUser.id);
-      localStorage.setItem('abunasir_admin_auth', 'false');
+      try {
+        localStorage.setItem('abunasir_auth_id', foundUser.id);
+        localStorage.setItem('abunasir_admin_auth', 'false');
+      } catch(e) {}
       return true;
     }
     return false;
@@ -84,8 +94,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const logout = () => {
     setUser(null);
-    localStorage.removeItem('abunasir_auth_id');
-    localStorage.removeItem('abunasir_admin_auth');
+    try {
+      localStorage.removeItem('abunasir_auth_id');
+      localStorage.removeItem('abunasir_admin_auth');
+    } catch(e) {}
   };
 
   return (

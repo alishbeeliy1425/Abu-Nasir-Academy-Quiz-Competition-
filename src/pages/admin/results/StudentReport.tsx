@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Card, CardContent } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { Search, FileText, Download, Printer, User as UserIcon } from 'lucide-react';
+import { Search, FileText, Download, Printer, User as UserIcon, X, CheckCircle, XCircle } from 'lucide-react';
 import { db, useStore } from '../../../lib/store';
 import { Result, User, Exam } from '../../../types';
 
@@ -12,6 +12,7 @@ export default function StudentReport() {
   const exams = useStore(state => state.exams || []);
   const [search, setSearch] = useState('');
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [viewingSlip, setViewingSlip] = useState<Result | null>(null);
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -19,8 +20,59 @@ export default function StudentReport() {
     u.email.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handlePrint = () => {
-    window.print();
+  const handlePrintReport = () => {
+    const printContent = document.getElementById('printable-student');
+    if (printContent) {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      const pri = iframe.contentWindow;
+      if (pri) {
+        pri.document.open();
+        pri.document.write('<html><head><title>Student Report</title>');
+        // Try to stringify all styles
+        const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        styles.forEach(s => pri.document.write(s.outerHTML));
+        pri.document.write('</head><body style="padding: 24px;">');
+        pri.document.write(printContent.innerHTML);
+        pri.document.write('</body></html>');
+        pri.document.close();
+        setTimeout(() => {
+          pri.focus();
+          pri.print();
+          document.body.removeChild(iframe);
+        }, 500);
+      }
+    } else {
+      window.print();
+    }
+  };
+
+  const handlePrintSlip = () => {
+    const printContent = document.getElementById('printable-slip');
+    if (printContent) {
+      const iframe = document.createElement('iframe');
+      iframe.style.display = 'none';
+      document.body.appendChild(iframe);
+      const pri = iframe.contentWindow;
+      if (pri) {
+        pri.document.open();
+        pri.document.write('<html><head><title>Result Slip</title>');
+        const styles = document.querySelectorAll('style, link[rel="stylesheet"]');
+        styles.forEach(s => pri.document.write(s.outerHTML));
+        pri.document.write('</head><body style="padding: 24px;">');
+        pri.document.write(printContent.innerHTML);
+        pri.document.write('</body></html>');
+        pri.document.close();
+        setTimeout(() => {
+          pri.focus();
+          pri.print();
+          document.body.removeChild(iframe);
+        }, 500);
+      }
+    } else {
+      window.print();
+    }
   };
 
   if (selectedUser) {
@@ -41,15 +93,15 @@ export default function StudentReport() {
         <div className="flex justify-between items-center no-print">
           <Button variant="outline" onClick={() => setSelectedUser(null)}>Back to Search</Button>
           <div className="flex gap-2">
-            <Button variant="outline" className="text-blue-600 bg-white" onClick={handlePrint}><Printer className="w-4 h-4 mr-2"/> Print Full Report</Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white"><Download className="w-4 h-4 mr-2"/> Export PDF</Button>
+            <Button variant="outline" className="text-blue-600 bg-white" onClick={handlePrintReport}><Printer className="w-4 h-4 mr-2"/> Print Full Report</Button>
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handlePrintReport}><Download className="w-4 h-4 mr-2"/> Export PDF</Button>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6" id="printable-student">
           <div className="lg:col-span-1">
             <Card className="border-0 shadow-sm ring-1 ring-slate-200 sticky top-6">
-               <div className="h-32 bg-gradient-to-r from-blue-600 to-indigo-700"></div>
+               <div className="h-32 bg-gradient-to-r from-blue-600 to-indigo-700 print:bg-blue-600"></div>
                <CardContent className="px-6 pb-6 relative">
                  <div className="w-24 h-24 rounded-xl border-4 border-white bg-slate-100 shadow-md overflow-hidden absolute -top-12">
                    <img src={selectedUser.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${selectedUser.name}`} alt="Student" className="w-full h-full object-cover" />
@@ -79,8 +131,8 @@ export default function StudentReport() {
 
           <div className="lg:col-span-2 space-y-6">
             <Card className="border-0 shadow-sm ring-1 ring-slate-200 overflow-hidden bg-white">
-              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center">
-                 <h3 className="font-bold text-slate-800 text-lg">Academic History & Results</h3>
+              <div className="p-5 border-b border-slate-100 bg-slate-50/50 flex justify-between items-center print:bg-white text-slate-800">
+                 <h3 className="font-bold text-lg">Academic History & Results</h3>
               </div>
               <div className="p-0">
                 {userResults.length === 0 ? (
@@ -94,7 +146,7 @@ export default function StudentReport() {
                       const exam = exams.find(e => e.id === res.examId);
                       const isPass = (res.percentage || 0) >= 50;
                       return (
-                        <div key={res.id} className="p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:bg-slate-50 transition-colors">
+                        <div key={res.id} className="p-5 flex flex-col sm:flex-row sm:justify-between sm:items-center gap-4 hover:bg-slate-50 transition-colors border-b last:border-0 border-slate-100">
                           <div>
                             <h4 className="font-bold text-slate-800 text-lg leading-tight">{exam?.title || res.examId}</h4>
                             <p className="text-sm text-slate-500 mt-1 flex items-center gap-2">
@@ -112,7 +164,7 @@ export default function StudentReport() {
                                 Grade: {res.grade}
                               </p>
                             </div>
-                            <Button variant="outline" size="sm" className="bg-white" onClick={() => window.alert('Detailed view of this specific result slip can be triggered here.')}>View Slip</Button>
+                            <Button variant="outline" size="sm" className="bg-white no-print" onClick={() => setViewingSlip(res)}>View Slip</Button>
                           </div>
                         </div>
                       )
@@ -123,6 +175,83 @@ export default function StudentReport() {
             </Card>
           </div>
         </div>
+
+        {/* View Slip Modal */}
+        {viewingSlip && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm no-print">
+            <Card className="w-full max-w-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
+              <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
+                <h3 className="font-bold text-slate-800">Result Slip</h3>
+                <Button variant="ghost" size="icon" onClick={() => setViewingSlip(null)}>
+                  <X className="w-5 h-5 text-slate-500" />
+                </Button>
+              </div>
+              <div className="p-6 overflow-y-auto max-h-[80vh]" id="printable-slip">
+                <div className="space-y-6">
+                  {/* Header */}
+                  <div className="text-center pb-6 border-b border-slate-100">
+                    <h2 className="text-2xl font-black text-slate-900 uppercase tracking-tight">Abu Nasir Academy</h2>
+                    <p className="text-slate-500 font-medium">Candidate Result Slip</p>
+                  </div>
+                  
+                  {/* Candidate Details */}
+                  <div className="grid grid-cols-2 gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Candidate Name</p>
+                      <p className="font-bold text-slate-800">{selectedUser.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Serial Number</p>
+                      <p className="font-mono font-bold text-slate-800">{selectedUser.serialNumber || 'N/A'}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Examination</p>
+                      <p className="font-bold text-slate-800">{exams.find(e => e.id === viewingSlip.examId)?.title}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Date Taken</p>
+                      <p className="font-bold text-slate-800">{new Date(viewingSlip.date).toLocaleDateString()}</p>
+                    </div>
+                  </div>
+
+                  {/* Score Board */}
+                  <div className="flex flex-col items-center justify-center py-6">
+                    <div className="w-32 h-32 rounded-full flex items-center justify-center border-8 border-slate-50 bg-white shadow-sm mb-4">
+                       <span className={`text-4xl font-black font-mono ${viewingSlip.percentage >= 50 ? 'text-green-600' : 'text-red-500'}`}>
+                         {viewingSlip.percentage}%
+                       </span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                       {viewingSlip.percentage >= 50 ? (
+                         <CheckCircle className="w-5 h-5 text-green-600" />
+                       ) : (
+                         <XCircle className="w-5 h-5 text-red-500" />
+                       )}
+                       <span className="font-bold text-slate-800 text-lg">
+                         Grade: {viewingSlip.grade}
+                       </span>
+                    </div>
+                    <p className="text-slate-500 text-sm mt-2 text-center max-w-md">
+                      {viewingSlip.remarks}
+                    </p>
+                  </div>
+                  
+                  {/* Footer Stats */}
+                  <div className="flex justify-between items-center pt-6 border-t border-slate-100 text-sm text-slate-500">
+                    <span>Score: {viewingSlip.score} / {viewingSlip.total}</span>
+                    <span>System Generated Result</span>
+                  </div>
+                </div>
+              </div>
+              <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/50">
+                <Button variant="outline" onClick={() => setViewingSlip(null)}>Close</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handlePrintSlip}>
+                  <Printer className="w-4 h-4 mr-2" /> Print PDF
+                </Button>
+              </div>
+            </Card>
+          </div>
+        )}
       </div>
     );
   }
@@ -181,3 +310,4 @@ export default function StudentReport() {
     </div>
   );
 }
+
