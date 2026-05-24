@@ -27,7 +27,7 @@ export default function AdminMonitor() {
     const qList = forceSubmitTarget.shuffledQuestions || [];
     let score = 0;
     qList.forEach(q => {
-      if (forceSubmitTarget.answers[q.id] === q.correctAnswer) score++;
+      if (forceSubmitTarget.answers?.[q.id] === q.correctAnswer) score++;
     });
 
     const total = Math.max(1, qList.length);

@@ -45,6 +45,8 @@ const defaultSettings: Settings = {
   passMark: 50,
   darkMode: false,
   antiCheatingEnabled: true,
+  gradingStyle: 'waec',
+  customGrades: []
 };
 
 const getTodayDate = () => new Date().toISOString().split('T')[0];

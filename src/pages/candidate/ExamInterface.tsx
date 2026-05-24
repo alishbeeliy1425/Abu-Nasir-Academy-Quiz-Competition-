@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { Clock, AlertTriangle, MonitorX, Flag, Menu, X, CheckCircle2, ChevronLeft, ChevronRight, Video } from 'lucide-react';
-import { db } from '../../lib/store';
+import { db, useStore } from '../../lib/store';
 import { Question } from '../../types';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../components/AuthProvider';
@@ -13,6 +13,8 @@ export default function ExamInterface() {
   const navigate = useNavigate();
   const { user } = useAuth();
   
+  const currentSession = useStore(state => state.sessions.find(s => s.examId === examId && s.candidateId === user?.id));
+
   const [questions, setQuestions] = useState<Question[]>([]);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -28,6 +30,13 @@ export default function ExamInterface() {
   // Submit Modal & States
   const [submitStatus, setSubmitStatus] = useState<'idle' | 'confirming' | 'submitting'>('idle');
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    if (examStarted && submitStatus === 'idle' && currentSession?.status === 'completed') {
+      alert('Your exam has been finalized (Force Submitted or completed).');
+      navigate('/candidate');
+    }
+  }, [examStarted, submitStatus, currentSession?.status, navigate]);
 
   // Load Exam
   useEffect(() => {
