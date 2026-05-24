@@ -94,12 +94,16 @@ let hasSubscribed = false;
 
 
 
+let syncPromise: Promise<void> | null = null;
+
 // Sync from supabase!
 export const syncFromSupabase = async (force = false) => {
-   if (isSynced && !force) return;
+   if (isSynced && !force) return syncPromise;
    isSynced = true;
-   try {
-     const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes, violationsRes, documentsRes] = await Promise.all([
+   
+   syncPromise = (async () => {
+     try {
+       const [usersRes, subjectsRes, questionsRes, examsRes, sessionsRes, resultsRes, attRes, settingsRes, violationsRes, documentsRes] = await Promise.all([
        supabase.from('users').select('*'),
        supabase.from('subjects').select('*'),
        supabase.from('questions').select('*'),
@@ -184,6 +188,8 @@ export const syncFromSupabase = async (force = false) => {
    } catch(e) {
       console.error("Supabase sync error:", e);
    }
+   })();
+   return syncPromise;
 }
 
 syncFromSupabase();

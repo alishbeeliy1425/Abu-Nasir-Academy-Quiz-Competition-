@@ -17,22 +17,41 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUserId = localStorage.getItem('abunasir_auth_id');
-    const isAdmin = localStorage.getItem('abunasir_admin_auth') === 'true';
+    const initializeAuth = async () => {
+      const savedUserId = localStorage.getItem('abunasir_auth_id');
+      const isAdmin = localStorage.getItem('abunasir_admin_auth') === 'true';
+      
+      if (isAdmin && savedUserId === 'super_admin') {
+        setUser({
+          id: 'super_admin',
+          role: 'admin',
+          name: 'System Admin',
+          email: 'admin@system'
+        });
+        setIsLoading(false);
+        return;
+      } 
+      
+      if (savedUserId) {
+        // Wait for sync so that remote users are populated
+        try {
+          const { syncFromSupabase } = await import('../lib/store');
+          await syncFromSupabase();
+        } catch(e) {}
+        
+        const state = db.get();
+        const loadedUser = state.users.find(u => u.id === savedUserId);
+        if (loadedUser) {
+          setUser(loadedUser);
+        } else {
+          // Fallback if not found yet (maybe network delay)
+          logout();
+        }
+      }
+      setIsLoading(false);
+    };
     
-    if (isAdmin && savedUserId === 'super_admin') {
-      setUser({
-        id: 'super_admin',
-        role: 'admin',
-        name: 'System Admin',
-        email: 'admin@system'
-      });
-    } else if (savedUserId) {
-      const state = db.get();
-      const loadedUser = state.users.find(u => u.id === savedUserId);
-      if (loadedUser) setUser(loadedUser);
-    }
-    setIsLoading(false);
+    initializeAuth();
   }, []);
 
   const loginAdmin = (password: string) => {

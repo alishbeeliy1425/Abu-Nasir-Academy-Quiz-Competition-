@@ -169,7 +169,7 @@ export default function AdminExams() {
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Duration (Mins)</label>
-                    <input type="number" value={formData.durationMinutes || ''} onChange={e => setFormData({ ...formData, durationMinutes: parseInt(e.target.value) || 0 })} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
+                    <input type="number" value={formData.durationMinutes} onChange={e => setFormData({ ...formData, durationMinutes: e.target.value as any })} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500" />
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-slate-700 mb-1">Grading System</label>
@@ -218,7 +218,7 @@ export default function AdminExams() {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 border border-slate-200 p-4 rounded-xl bg-slate-50">
                     <div>
                       <label className="block text-sm font-medium text-slate-700 mb-1">Questions/Candidate</label>
-                      <input type="number" value={formData.questionsPerCandidate || ''} onChange={e => setFormData({ ...formData, questionsPerCandidate: parseInt(e.target.value) || 0 })} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" min={1} />
+                      <input type="number" value={formData.questionsPerCandidate} onChange={e => setFormData({ ...formData, questionsPerCandidate: e.target.value as any })} className="w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 bg-white" min={1} />
                       <p className="text-[11px] text-slate-500 mt-1">Random subset from pool</p>
                     </div>
                     <div className="flex items-center gap-2 pt-6">

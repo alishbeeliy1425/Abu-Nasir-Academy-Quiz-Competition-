@@ -34,7 +34,6 @@ export default function PublishResults() {
       (r as any).isPublished = true;
       db.saveResult(r);
     });
-    setResults(db.getResults());
     alert('All results published.');
   };
 
@@ -44,7 +43,6 @@ export default function PublishResults() {
       (r as any).isPublished = false;
       db.saveResult(r);
     });
-    setResults(db.getResults());
     alert('All results unpublished.');
   };
 

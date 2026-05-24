@@ -27,7 +27,7 @@ export default async function handler(req: any, res: any) {
     Provide a brief explanation for the correct answer.`;
 
     const response = await ai.models.generateContent({
-      model: "gemini-3.1-pro-preview",
+      model: "gemini-3.5-flash",
       contents: prompt,
       config: {
         responseMimeType: "application/json",
@@ -58,7 +58,8 @@ export default async function handler(req: any, res: any) {
       }
     });
 
-    const rawText = response.text || "[]";
+    let rawText = response.text || "[]";
+    rawText = rawText.replace(/^```json/g, "").replace(/```$/g, "").trim();
     const questionsData = JSON.parse(rawText);
 
     res.status(200).json({ questions: questionsData });

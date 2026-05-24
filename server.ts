@@ -44,7 +44,7 @@ async function startServer() {
       Provide a brief explanation for the correct answer.`;
 
       const response = await ai.models.generateContent({
-        model: "gemini-3.1-pro-preview",
+        model: "gemini-3.5-flash",
         contents: prompt,
         config: {
           responseMimeType: "application/json",
@@ -75,7 +75,8 @@ async function startServer() {
         }
       });
 
-      const rawText = response.text || "[]";
+      let rawText = response.text || "[]";
+      rawText = rawText.replace(/^```json/g, "").replace(/```$/g, "").trim();
       const questionsData = JSON.parse(rawText);
 
       res.json({ questions: questionsData });

@@ -5,7 +5,7 @@ import { Settings, Save, RotateCcw, Download, Upload, Shield, Monitor, FileSprea
 import { db } from '../../lib/store';
 
 export default function AdminSettings() {
-  const [settings, setSettings] = useState({
+  const [settings, setSettings] = useState<any>({
     websiteName: '',
     websiteDescription: '',
     contactEmail: '',
@@ -13,7 +13,7 @@ export default function AdminSettings() {
     address: '',
     defaultExamDuration: 60,
     autoSubmit: true,
-    antiCheatingSensitivity: 'medium',
+    antiCheatingEnabled: true,
     passMark: 50,
     darkMode: false
   });
@@ -304,7 +304,7 @@ export default function AdminSettings() {
                     <input 
                       type="number" 
                       value={settings.defaultExamDuration}
-                      onChange={e => setSettings({...settings, defaultExamDuration: parseInt(e.target.value) || 60})}
+                      onChange={e => setSettings({...settings, defaultExamDuration: e.target.value as any})}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                     />
                   </div>
@@ -313,7 +313,7 @@ export default function AdminSettings() {
                     <input 
                       type="number" 
                       value={settings.passMark}
-                      onChange={e => setSettings({...settings, passMark: parseInt(e.target.value) || 50})}
+                      onChange={e => setSettings({...settings, passMark: e.target.value as any})}
                       className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                     />
                   </div>
@@ -353,7 +353,7 @@ export default function AdminSettings() {
                   <input 
                     type="number" 
                     value={settings.passMark}
-                    onChange={e => setSettings({...settings, passMark: parseInt(e.target.value) || 50})}
+                    onChange={e => setSettings({...settings, passMark: e.target.value as any})}
                     className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm"
                   />
                   <p className="text-xs text-slate-500 mt-1">Scores below this percentage will be marked as failed.</p>

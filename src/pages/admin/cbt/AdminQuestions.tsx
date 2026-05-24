@@ -86,7 +86,7 @@ export default function AdminQuestions() {
       subject: formData.subject,
       topic: formData.topic,
       difficulty: formData.difficulty as any,
-      correctAnswer: formData.correct,
+      correctAnswer: formData.correct as any,
       options: [
         { label: 'A', text: formData.optA },
         { label: 'B', text: formData.optB },
@@ -109,7 +109,8 @@ export default function AdminQuestions() {
       alert("Please select a subject.");
       return;
     }
-    if (aiData.count <= 0) {
+    const targetCount = Number(aiData.count) || 0;
+    if (targetCount <= 0) {
       alert("Please enter a valid count.");
       return;
     }
@@ -117,12 +118,12 @@ export default function AdminQuestions() {
     setIsGenerating(true);
     setGenerationProgress(0);
     const BATCH_SIZE = 10;
-    const totalBatches = Math.ceil(aiData.count / BATCH_SIZE);
+    const totalBatches = Math.ceil(targetCount / BATCH_SIZE);
     let generatedCount = 0;
 
     try {
       for (let i = 0; i < totalBatches; i++) {
-        const batchCount = Math.min(BATCH_SIZE, aiData.count - i * BATCH_SIZE);
+        const batchCount = Math.min(BATCH_SIZE, targetCount - i * BATCH_SIZE);
         
         const response = await fetch('/api/generate-questions', {
           method: 'POST',
@@ -260,9 +261,8 @@ export default function AdminQuestions() {
                     </div>
                     <div className="space-y-2">
                       <label className="block text-xs font-semibold text-indigo-300 uppercase tracking-widest">Question Yield</label>
-                      <input type="number" min={1} max={500} value={aiData.count || ''} onChange={e => {
-                        let val = e.target.value;
-                        setAiData({ ...aiData, count: val === '' ? ('' as any) : parseInt(val) });
+                      <input type="number" min={1} max={500} value={aiData.count} onChange={e => {
+                        setAiData({ ...aiData, count: e.target.value as any });
                       }} className="w-full p-3 bg-slate-800/50 border border-slate-700 rounded-xl text-slate-200 focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500/50 outline-none transition-all shadow-inner" />
                     </div>
                   </div>
@@ -466,7 +466,7 @@ export default function AdminQuestions() {
       <CsvImportModal 
         isOpen={isCsvModalOpen} 
         onClose={() => setIsCsvModalOpen(false)} 
-        onImportComplete={() => setQuestions(db.getQuestions())} 
+        onImportComplete={() => {}} 
       />
     </div>
   );
