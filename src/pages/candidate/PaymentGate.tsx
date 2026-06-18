@@ -3,7 +3,6 @@ import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
 import { useAuth } from '../../components/AuthProvider';
 import { Shield, CreditCard, Loader2, Landmark, MessageSquare } from 'lucide-react';
-import { usePaystackPayment } from 'react-paystack';
 import { db } from '../../lib/store';
 import { useNavigate } from 'react-router-dom';
 
