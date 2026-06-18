@@ -81,6 +81,31 @@ async function startServer() {
     }
   });
 
+  // Paystack verification route
+  app.get("/api/verify-payment/:reference", async (req, res) => {
+    try {
+      const { reference } = req.params;
+      const secretKey = process.env.PAYSTACK_SECRET_KEY;
+      
+      if (!secretKey) {
+        return res.status(500).json({ error: "PAYSTACK_SECRET_KEY is not configured" });
+      }
+
+      const response = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${secretKey}`
+        }
+      });
+      
+      const data = await response.json();
+      res.json(data);
+    } catch (error: any) {
+      console.error("Paystack verification error:", error);
+      res.status(500).json({ error: "Verification failed" });
+    }
+  });
+
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
     const vite = await createViteServer({

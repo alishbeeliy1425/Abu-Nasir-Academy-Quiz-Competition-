@@ -18,6 +18,8 @@ const Register = React.lazy(() => import("./pages/auth/Register"));
 const CandidateDashboard = React.lazy(
   () => import("./pages/candidate/Dashboard"),
 );
+const PaymentGate = React.lazy(() => import("./pages/candidate/PaymentGate"));
+const PaymentSuccessful = React.lazy(() => import("./pages/candidate/PaymentSuccessful"));
 const ExamInterface = React.lazy(
   () => import("./pages/candidate/ExamInterface"),
 );
@@ -57,6 +59,14 @@ const AdminRoute = () => {
   return <AdminLogin />;
 };
 
+const CandidateRouteWrapper = ({ isExam = false }: { isExam?: boolean }) => {
+  const { user } = useAuth();
+  if (user?.role === 'candidate' && (user.paymentStatus === 'pending' || user.paymentStatus === 'pending_verification')) {
+     return <PaymentGate />;
+  }
+  return isExam ? <ExamInterface /> : <CandidateDashboard />;
+};
+
 export default function App() {
   return (
     <ErrorBoundary>
@@ -69,12 +79,19 @@ export default function App() {
                 <Route path="/" element={<Welcome />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/payment-selection" element={<PaymentGate />} />
+              <Route path="/paymentsuccessful" element={
+                 <ProtectedRoute allowedRoles={["candidate"]}>
+                    <PaymentSuccessful />
+                 </ProtectedRoute>
+              } />
 
               <Route
                 path="/candidate/take-exam/:examId"
                 element={
                   <ProtectedRoute allowedRoles={["candidate"]}>
-                    <ExamInterface />
+                    {/* Inline check to block unpaid access */}
+                    <CandidateRouteWrapper isExam />
                   </ProtectedRoute>
                 }
               />
@@ -83,7 +100,7 @@ export default function App() {
                 path="/candidate/*"
                 element={
                   <ProtectedRoute allowedRoles={["candidate"]}>
-                    <CandidateDashboard />
+                    <CandidateRouteWrapper />
                   </ProtectedRoute>
                 }
               />

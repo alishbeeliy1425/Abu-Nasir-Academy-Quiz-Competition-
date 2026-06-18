@@ -102,32 +102,23 @@ export default function Register() {
       return;
     }
 
-    const currentYear = new Date().getFullYear();
-    const candidateCount = (state.users || []).filter(u => u.role === 'candidate').length + 1;
-    const serialNumber = `ANA${currentYear}${candidateCount.toString().padStart(3, '0')}`;
-
-    // Create user
-    db.addUser({
-      id: `std_${Date.now()}_${Math.random().toString(36).substring(2,9)}`,
-      role: 'candidate',
+    const pendingRegistration = {
       name: formData.name,
       email: formData.email,
       phone: formData.phone,
       password: formData.password, // Simple non-hashed storage for local demo
-      serialNumber: serialNumber,
       schoolName: formData.schoolName,
       address: formData.address,
       state: formData.state,
       country: formData.country,
-      photoUrl: photoUrl
-    });
-
-    setSuccess(true);
+      photoUrl: photoUrl,
+      competitionCategory: '' // Added from dashboard specs, can be updated later if needed
+    };
     
-    // Auto navigate to login after a short delay
-    setTimeout(() => {
-      navigate('/login?role=candidate');
-    }, 2000);
+    sessionStorage.setItem('pendingRegistration', JSON.stringify(pendingRegistration));
+    
+    // Immediately redirect to payment selection
+    navigate('/payment-selection');
   };
 
   return (

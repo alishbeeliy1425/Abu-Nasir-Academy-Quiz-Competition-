@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo } from "react";
 import { Routes, Route, Navigate, useNavigate } from "react-router-dom";
-import { Home, PlayCircle, FileText, Trophy } from "lucide-react";
+import { Home, PlayCircle, FileText, Trophy, BarChart2, BookOpen } from "lucide-react";
 import { DashboardLayout } from "../../components/layout/DashboardLayout";
 import { Card, CardContent, CardHeader } from "../../components/ui/card";
 import { Button } from "../../components/ui/button";
@@ -697,10 +697,120 @@ const CandidateLeaderboard = () => {
   );
 };
 
+const CandidateReports = () => {
+  const { user } = useAuth();
+  const allResults = useStore((state) => state.results || []);
+  const exams = useStore((state) => state.exams || []);
+  const myResults = allResults.filter(r => r.candidateId === user?.id);
+
+  const availableQuizzes = exams.filter(e => e.status === 'active').length;
+
+  return (
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <h2 className="text-2xl font-bold">Candidate Reports</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card className="shadow-sm border-0 ring-1 ring-slate-200">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <h3 className="font-bold text-slate-800">Registration & Payment</h3>
+          </CardHeader>
+          <CardContent className="p-0 divide-y divide-slate-100 text-sm">
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Registration Status</span>
+              <span className="font-bold text-green-600 bg-green-50 px-2 py-0.5 rounded uppercase">Complete</span>
+            </div>
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Payment Status</span>
+              <span className="font-bold text-blue-600 bg-blue-50 px-2 py-0.5 rounded uppercase">
+                {user?.paymentStatus === 'paid' ? 'Paid' : 'Pending'}
+              </span>
+            </div>
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Amount</span>
+              <span className="font-bold text-slate-800">₦{user?.amountPaid || 1000}</span>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="shadow-sm border-0 ring-1 ring-slate-200">
+          <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+            <h3 className="font-bold text-slate-800">Quiz Statistics</h3>
+          </CardHeader>
+          <CardContent className="p-0 divide-y divide-slate-100 text-sm">
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Active Quizzes Available</span>
+              <span className="font-bold text-slate-800">{availableQuizzes}</span>
+            </div>
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Quizzes Completed</span>
+              <span className="font-bold text-slate-800">{myResults.length}</span>
+            </div>
+            <div className="p-4 flex justify-between">
+              <span className="font-medium text-slate-500">Total Cumulative Score</span>
+              <span className="font-bold text-blue-600">{myResults.reduce((a, c) => a + c.score, 0)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+    </div>
+  );
+};
+
+const CandidateProfile = () => {
+  const { user } = useAuth();
+  return (
+    <div className="space-y-6 max-w-4xl animate-in fade-in duration-500">
+      <h2 className="text-2xl font-bold">My Profile</h2>
+      <Card className="shadow-sm border-0 ring-1 ring-slate-200 bg-white">
+        <CardContent className="p-8">
+           <div className="flex flex-col md:flex-row gap-8 items-start">
+              <img src={user?.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`} className="w-32 h-32 rounded-full border-4 border-slate-100 object-cover shadow-sm bg-white" alt="Profile" />
+              <div className="flex-1 space-y-4 w-full">
+                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Full Name</p>
+                      <p className="font-medium text-slate-900">{user?.name}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Candidate ID</p>
+                      <p className="font-mono text-blue-700 font-bold">{user?.serialNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Email</p>
+                      <p className="font-medium text-slate-900">{user?.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Phone</p>
+                      <p className="font-medium text-slate-900">{user?.phone}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">School Name</p>
+                      <p className="font-medium text-slate-900">{user?.schoolName}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Competition Category</p>
+                      <p className="font-bold text-slate-900 uppercase">{user?.competitionCategory || 'General'}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold text-slate-500">Payment Status</p>
+                      <p className={`font-bold capitalize ${user?.paymentStatus === 'paid' ? 'text-green-600' : 'text-amber-600'}`}>
+                        {user?.paymentStatus || 'Pending'}
+                      </p>
+                    </div>
+                 </div>
+              </div>
+           </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+};
+
 export default function CandidateDashboard() {
   const navigation = [
-    { name: "Home", href: "/candidate", icon: Home },
-    { name: "Exams", href: "/candidate/exams", icon: PlayCircle },
+    { name: "Dashboard", href: "/candidate", icon: Home },
+    { name: "My Profile", href: "/candidate/profile", icon: BookOpen },
+    { name: "Reports", href: "/candidate/reports", icon: BarChart2 },
+    { name: "Available Quizzes", href: "/candidate/exams", icon: PlayCircle },
     { name: "Results", href: "/candidate/results", icon: FileText },
     { name: "Leaderboard", href: "/candidate/leaderboard", icon: Trophy },
   ];
@@ -709,9 +819,11 @@ export default function CandidateDashboard() {
     <DashboardLayout navigation={navigation}>
       <Routes>
         <Route path="/" element={<CandidateHome />} />
+        <Route path="/profile" element={<CandidateProfile />} />
         <Route path="/exams" element={<CandidateExams />} />
         <Route path="/results" element={<CandidateResults />} />
         <Route path="/leaderboard" element={<CandidateLeaderboard />} />
+        <Route path="/reports" element={<CandidateReports />} />
         <Route path="*" element={<Navigate to="/candidate" replace />} />
       </Routes>
     </DashboardLayout>

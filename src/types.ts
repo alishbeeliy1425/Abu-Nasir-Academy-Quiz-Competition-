@@ -13,6 +13,11 @@ export interface User {
   state?: string;
   country?: string;
   photoUrl?: string;
+  paymentStatus?: 'pending' | 'pending_verification' | 'paid';
+  paymentReference?: string;
+  amountPaid?: number;
+  paymentDate?: string;
+  competitionCategory?: string;
 }
 
 export interface Subject {

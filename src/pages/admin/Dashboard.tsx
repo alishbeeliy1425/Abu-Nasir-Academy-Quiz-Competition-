@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { 
   Home, Users, BookOpen, Settings, BarChart2, CalendarCheck, 
   Monitor, FileSpreadsheet, Folder, PieChart, Shield, Download,
-  UserPlus, Award
+  UserPlus, Award, CreditCard
 } from 'lucide-react';
 import { DashboardLayout, NavItem } from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
@@ -34,6 +34,7 @@ const StudentPerformance = React.lazy(() => import('./results/StudentPerformance
 const PublishResults = React.lazy(() => import('./results/PublishResults'));
 const StudentReport = React.lazy(() => import('./results/StudentReport'));
 const AdminLeaderboards = React.lazy(() => import('./Leaderboards'));
+const AdminPayments = React.lazy(() => import('./AdminPayments'));
 
 // --- STUB PAGES FOR NEW NAV MODULES ---
 const ComingSoon = ({ title }: { title: string }) => (
@@ -318,6 +319,11 @@ export default function AdminDashboard() {
         { name: 'Admins', href: '/admin/users/admins' },
       ]
     },
+    { 
+      name: 'Payments', 
+      href: '/admin/payments', 
+      icon: CreditCard 
+    },
     { name: 'Documents', href: '/admin/documents', icon: Folder },
     { name: 'System Settings', href: '/admin/settings', icon: Settings },
   ];
@@ -331,6 +337,9 @@ export default function AdminDashboard() {
             
             {/* Leaderboards */}
             <Route path="leaderboards" element={<AdminLeaderboards />} />
+
+            {/* Payments */}
+            <Route path="payments" element={<AdminPayments />} />
 
             {/* Attendance Routes */}
             <Route path="attendance/mark" element={<AdminMarkAttendance />} />
