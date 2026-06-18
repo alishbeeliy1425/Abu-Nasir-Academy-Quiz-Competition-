@@ -94,26 +94,43 @@ const defaultDB: DBState = {
 
 let localState: DBState = { ...defaultDB };
 
+const localChannel = typeof BroadcastChannel !== 'undefined' ? new BroadcastChannel('app_local_sync') : null;
+
+if (localChannel) {
+  localChannel.onmessage = (e) => {
+    if (e.data?.type === 'SETTINGS_UPDATE') {
+      localState.settings = e.data.settings;
+      notify();
+    }
+  };
+}
+
 // Simple observable pattern for UI updates
 type Listener = () => void;
 const listeners = new Set<Listener>();
 
-const notifyDbUpdate = () => {
-  listeners.forEach((l) => l());
-};
-
 const notify = () => {
-  // Rather than deep cloning every array on every notify (which destroys referential
-  // equality and causes infinite rerenders), we just notify listeners. The caller
-  // must ensure they replaced the array/object reference if they mutated it.
-  notifyDbUpdate();
+  localState = {
+    ...localState,
+    users: localState.users ? [...localState.users] : [],
+    subjects: localState.subjects ? [...localState.subjects] : [],
+    questions: localState.questions ? [...localState.questions] : [],
+    exams: localState.exams ? [...localState.exams] : [],
+    sessions: localState.sessions ? [...localState.sessions] : [],
+    results: localState.results ? [...localState.results] : [],
+    attendance: localState.attendance ? [...localState.attendance] : [],
+    violations: localState.violations ? [...localState.violations] : [],
+    documents: localState.documents ? [...localState.documents] : [],
+    settings: localState.settings ? { ...localState.settings } : undefined,
+  };
+  listeners.forEach((l) => l());
 };
 
 let debounceTimer: ReturnType<typeof setTimeout> | null = null;
 const debouncedNotify = () => {
   if (debounceTimer) clearTimeout(debounceTimer);
   debounceTimer = setTimeout(() => {
-    notifyDbUpdate();
+    notify();
   }, 100);
 };
 
@@ -631,12 +648,18 @@ export const db = {
   saveSettings(settings: typeof defaultSettings) {
     localState.settings = settings;
     notify();
+    if (localChannel) {
+      localChannel.postMessage({ type: 'SETTINGS_UPDATE', settings });
+    }
     const dbObj = { ...settings, id: 1 };
     supabase.from("settings").upsert(dbObj).then();
   },
   resetSettings() {
     localState.settings = defaultSettings;
     notify();
+    if (localChannel) {
+      localChannel.postMessage({ type: 'SETTINGS_UPDATE', settings: defaultSettings });
+    }
     const dbObj = { ...defaultSettings, id: 1 };
     supabase.from("settings").upsert(dbObj).then();
   },

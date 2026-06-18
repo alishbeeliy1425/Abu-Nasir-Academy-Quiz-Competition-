@@ -33,6 +33,7 @@ const SessionReport = React.lazy(() => import('./results/SessionReport'));
 const StudentPerformance = React.lazy(() => import('./results/StudentPerformance'));
 const PublishResults = React.lazy(() => import('./results/PublishResults'));
 const StudentReport = React.lazy(() => import('./results/StudentReport'));
+const AdminLeaderboards = React.lazy(() => import('./Leaderboards'));
 
 // --- STUB PAGES FOR NEW NAV MODULES ---
 const ComingSoon = ({ title }: { title: string }) => (
@@ -215,6 +216,11 @@ export default function AdminDashboard() {
       ]
     },
     { 
+      name: 'Leaderboards Management',
+      icon: Award,
+      href: '/admin/leaderboards'
+    },
+    { 
       name: 'Result Generation', 
       icon: FileSpreadsheet,
       children: [
@@ -247,6 +253,9 @@ export default function AdminDashboard() {
           <Routes location={location}>
             <Route path="/" element={<AdminHome />} />
             
+            {/* Leaderboards */}
+            <Route path="leaderboards" element={<AdminLeaderboards />} />
+
             {/* Attendance Routes */}
             <Route path="attendance/mark" element={<AdminMarkAttendance />} />
             <Route path="attendance/view" element={<AdminViewAttendance />} />

@@ -11,6 +11,8 @@ import { useSettings } from "../../components/SettingsProvider";
 
 const CandidateExams = () => {
   const allExams = useStore((state) => state.exams || []);
+  const allSessions = useStore((state) => state.sessions || []);
+  const allResults = useStore((state) => state.results || []);
   const exams = useMemo(() => allExams.slice().reverse(), [allExams]);
   const { user } = useAuth();
   const navigate = useNavigate();
@@ -21,25 +23,28 @@ const CandidateExams = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const results = db.getResults();
+  const { userResultsMap, userSessionsMap } = useMemo(() => {
+    const resultsMap = new Map();
+    const sessionsMap = new Map();
+    if (user) {
+      allResults.forEach(r => {
+        if (r.candidateId === user.id) resultsMap.set(r.examId, r);
+      });
+      allSessions.forEach(s => {
+        if (s.candidateId === user.id) sessionsMap.set(s.examId, s);
+      });
+    }
+    return { userResultsMap: resultsMap, userSessionsMap: sessionsMap };
+  }, [allResults, allSessions, user]);
 
   return (
     <div className="space-y-6">
       <h2 className="text-2xl font-bold">Upcoming & Available Exams</h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {exams.map((exam) => {
-          const hasTaken = user
-            ? results.some(
-                (r) => r.candidateId === user.id && r.examId === exam.id,
-              )
-            : false;
-          const session = user
-            ? db
-                .getSessions()
-                .find((s) => s.candidateId === user.id && s.examId === exam.id)
-            : null;
-          const isCompleted =
-            hasTaken || (session && session.status === "completed");
+          const hasTaken = userResultsMap.has(exam.id);
+          const session = userSessionsMap.get(exam.id);
+          const isCompleted = hasTaken || (session && session.status === "completed");
 
           let isScheduled = false;
           let timeToStart = 0;
@@ -459,106 +464,225 @@ const CandidateResults = () => {
 };
 
 const CandidateLeaderboard = () => {
-  const results = useStore((state) => state.results || []);
-  const users = useStore((state) => state.users || []);
+  const allResults = useStore((state) => state.results || []);
+  const allUsers = useStore((state) => state.users || []);
+  const exams = useStore((state) => state.exams || []);
+  const sessions = useStore((state) => state.sessions || []);
+  const { user } = useAuth();
+  
+  // Exams the candidate has taken
+  const takenExamIds = useMemo(() => Array.from(new Set(allResults.filter(r => r.candidateId === user?.id).map(r => r.examId))), [allResults, user?.id]);
+  const defaultExamId = takenExamIds.length > 0 ? takenExamIds[takenExamIds.length - 1] : '';
+  const [selectedExamId, setSelectedExamId] = useState<string>(defaultExamId);
 
-  const leaderboard = useMemo(() => {
-    const aggregated: Record<
-      string,
-      { totalScore: number; examsTaken: number }
-    > = {};
-    results.forEach((r) => {
-      if (!aggregated[r.candidateId])
-        aggregated[r.candidateId] = { totalScore: 0, examsTaken: 0 };
-      aggregated[r.candidateId].totalScore += r.score;
-      aggregated[r.candidateId].examsTaken += 1;
+  // Sync default exam on first pass if missing
+  React.useEffect(() => {
+    if (!selectedExamId && defaultExamId) {
+      setSelectedExamId(defaultExamId);
+    }
+  }, [defaultExamId, selectedExamId]);
+
+  const candidates = useMemo(() => allUsers.filter(u => u.role === 'candidate'), [allUsers]);
+
+  const examLeaderboard = useMemo(() => {
+    if (!selectedExamId) return [];
+
+    const examResults = allResults.filter(r => r.examId === selectedExamId);
+    
+    const enrichedResults = examResults.map(res => {
+      const candidate = candidates.find(c => c.id === res.candidateId);
+      const session = sessions.find(s => s.id === res.sessionId || (s.examId === selectedExamId && s.candidateId === res.candidateId && s.status === 'completed'));
+      
+      let durationMs = 0;
+      if (session && session.startTime && session.endTime) {
+         durationMs = new Date(session.endTime).getTime() - new Date(session.startTime).getTime();
+      }
+
+      return {
+        ...res,
+        candidateName: candidate?.name || 'Unknown Student',
+        serialNumber: candidate?.serialNumber || candidate?.id.split('_')[1] || 'N/A',
+        photoUrl: candidate?.photoUrl,
+        durationMs
+      };
     });
 
-    return Object.keys(aggregated)
-      .map((cId) => {
-        const user = users.find((u) => u.id === cId);
-        return {
-          id: cId,
-          name: user?.name || "Unknown Student",
-          photoUrl: user?.photoUrl,
-          score: aggregated[cId].totalScore,
-          exams: aggregated[cId].examsTaken,
-        };
-      })
-      .sort((a, b) => b.score - a.score)
-      .slice(0, 50);
-  }, [results, users]);
+    return enrichedResults.sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const bPct = b.percentage || 0;
+      const aPct = a.percentage || 0;
+      if (bPct !== aPct) return bPct - aPct;
+      if (a.durationMs > 0 && b.durationMs > 0) return a.durationMs - b.durationMs;
+      return 0; // fallback
+    });
+  }, [allResults, sessions, selectedExamId, candidates]);
+
+  const myPositionObj = useMemo(() => {
+    if (!user?.id) return null;
+    const index = examLeaderboard.findIndex(r => r.candidateId === user.id);
+    if (index === -1) return null;
+    return {
+      rank: index + 1,
+      total: examLeaderboard.length,
+      data: examLeaderboard[index]
+    };
+  }, [examLeaderboard, user?.id]);
 
   return (
-    <div className="space-y-6">
-      <h2 className="text-2xl font-bold flex items-center gap-3">
-        <Trophy className="h-8 w-8 text-yellow-500" />
-        Global Leaderboard
-      </h2>
-      <Card>
-        <CardContent className="p-0 overflow-x-auto">
-          <table className="w-full text-sm text-left">
-            <thead className="bg-gray-50 border-b">
-              <tr>
-                <th className="px-6 py-4 font-bold text-gray-700">Rank</th>
-                <th className="px-6 py-4 font-bold text-gray-700">Candidate</th>
-                <th className="px-6 py-4 font-bold text-gray-700 text-right">
-                  Cumulative Score
-                </th>
-                <th className="px-6 py-4 font-bold text-gray-700 text-right">
-                  Exams Taken
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {leaderboard.length === 0 && (
-                <tr>
-                  <td colSpan={4} className="p-8 text-center text-gray-500">
-                    No scores recorded yet.
-                  </td>
-                </tr>
-              )}
-              {leaderboard.map((student, idx) => (
-                <tr
-                  key={student.id}
-                  className="border-b last:border-0 hover:bg-gray-50 transition-colors"
-                >
-                  <td className="px-6 py-4">
-                    {idx === 0 ? (
-                      <Trophy className="h-5 w-5 text-yellow-500 inline-block mr-2" />
-                    ) : idx === 1 ? (
-                      <Trophy className="h-5 w-5 text-gray-400 inline-block mr-2" />
-                    ) : idx === 2 ? (
-                      <Trophy className="h-5 w-5 text-amber-700 inline-block mr-2" />
-                    ) : (
-                      <span className="inline-block w-5 text-gray-500 font-mono pl-1">
-                        {idx + 1}
-                      </span>
-                    )}
-                  </td>
-                  <td className="px-6 py-4 font-medium text-gray-900 flex items-center gap-3">
-                    <img
-                      src={
-                        student.photoUrl ||
-                        `https://api.dicebear.com/7.x/initials/svg?seed=${student.name}&backgroundColor=0ea5e9`
-                      }
-                      alt={student.name}
-                      className="w-8 h-8 rounded-full border border-gray-200 object-cover"
-                    />
-                    {student.name}
-                  </td>
-                  <td className="px-6 py-4 text-right font-mono font-bold text-blue-600">
-                    {student.score}
-                  </td>
-                  <td className="px-6 py-4 text-right text-gray-500">
-                    {student.exams}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </CardContent>
-      </Card>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold flex items-center gap-3">
+            <Trophy className="h-8 w-8 text-blue-600" />
+            Exam Leaderboards
+          </h2>
+          <p className="text-sm text-slate-500 mt-1">View standalone rankings and your position for each exam.</p>
+        </div>
+        <div className="w-full sm:w-64">
+           <select 
+             className="w-full px-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 font-medium text-slate-700"
+             value={selectedExamId}
+             onChange={(e) => setSelectedExamId(e.target.value)}
+           >
+             <option value="">-- Select an Exam --</option>
+             {exams.map(exam => (
+               <option key={exam.id} value={exam.id}>{exam.title}</option>
+             ))}
+           </select>
+        </div>
+      </div>
+
+      {!selectedExamId ? (
+        <Card className="border-0 shadow-sm ring-1 ring-slate-200 bg-white">
+          <CardContent className="p-12 text-center text-slate-500">
+            <Trophy className="w-12 h-12 text-slate-300 mx-auto mb-3" />
+            <p className="text-lg font-medium text-slate-700">No Exam Selected</p>
+            <p className="text-sm">Select an exam to view its leaderboard and your ranking.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="space-y-6">
+          {myPositionObj && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+               <Card className="bg-gradient-to-br from-blue-600 to-indigo-700 text-white border-0 shadow-md">
+                 <CardContent className="p-6">
+                    <p className="text-blue-100 font-medium text-sm uppercase tracking-wider mb-2">My Position</p>
+                    <div className="flex items-end gap-2">
+                       <span className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-b from-white to-blue-200">{myPositionObj.rank}</span>
+                       <span className="text-blue-200 font-medium mb-1">/ {myPositionObj.total}</span>
+                    </div>
+                    <p className="text-xs text-blue-200 mt-2">Ranked by score, percentage, and completion time.</p>
+                 </CardContent>
+               </Card>
+               <Card className="bg-white border border-slate-200 shadow-sm">
+                 <CardContent className="p-6">
+                    <p className="text-slate-500 font-medium text-sm uppercase tracking-wider mb-2">My Score</p>
+                    <div className="flex items-end gap-2">
+                       <span className="text-4xl font-bold text-slate-800">{myPositionObj.data.score}</span>
+                    </div>
+                    <p className="text-xs text-slate-500 mt-2 font-mono">{myPositionObj.data.percentage}% • Grade: {myPositionObj.data.grade}</p>
+                 </CardContent>
+               </Card>
+               <Card className="bg-emerald-50 border border-emerald-100 shadow-sm">
+                 <CardContent className="p-6">
+                    <p className="text-emerald-700 font-medium text-sm uppercase tracking-wider mb-2">Completion Time</p>
+                    <div className="flex items-end gap-2 text-emerald-800">
+                       <span className="text-4xl font-bold">
+                         {myPositionObj.data.durationMs > 0 ? (myPositionObj.data.durationMs / 60000).toFixed(1) : '—'}
+                       </span>
+                       <span className="font-medium mb-1 shrink-0">min</span>
+                    </div>
+                    <p className="text-xs text-emerald-600 mt-2 font-mono">Date taken: {new Date(myPositionObj.data.date).toLocaleDateString()}</p>
+                 </CardContent>
+               </Card>
+            </div>
+          )}
+
+          <Card className="border-0 shadow-sm ring-1 ring-slate-200 bg-white">
+            <CardHeader className="border-b border-slate-100 bg-slate-50/50">
+               <h3 className="font-bold text-slate-800 text-lg">Top Performers / Leaderboard</h3>
+               <p className="text-sm text-slate-500">Only showing candidates for {exams.find(e => e.id === selectedExamId)?.title}</p>
+            </CardHeader>
+            <CardContent className="p-0 overflow-x-auto">
+              <table className="w-full text-sm text-left">
+                <thead className="bg-white border-b border-slate-100">
+                  <tr>
+                    <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Rank</th>
+                    <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs">Candidate</th>
+                    <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">Score</th>
+                    <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-center">Grade</th>
+                    <th className="px-6 py-4 font-bold text-slate-500 uppercase tracking-wider text-xs text-right">Time Taken</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-50">
+                  {examLeaderboard.length === 0 && (
+                    <tr>
+                      <td colSpan={5} className="p-8 text-center text-slate-500">
+                        No candidates have completed this exam yet.
+                      </td>
+                    </tr>
+                  )}
+                  {examLeaderboard.slice(0, 50).map((student, idx) => {
+                    const isMe = user?.id === student.candidateId;
+                    return (
+                      <tr
+                        key={student.id}
+                        className={`transition-colors ${isMe ? 'bg-blue-50/50 ring-1 ring-inset ring-blue-100' : 'hover:bg-slate-50/50'}`}
+                      >
+                        <td className="px-6 py-4">
+                          {idx === 0 ? (
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-amber-100 text-amber-600 font-bold">1</div>
+                          ) : idx === 1 ? (
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-slate-200 text-slate-600 font-bold">2</div>
+                          ) : idx === 2 ? (
+                            <div className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-100 text-orange-700 font-bold">3</div>
+                          ) : (
+                            <div className={`flex items-center justify-center w-8 h-8 font-bold ${isMe ? 'text-blue-700' : 'text-slate-500'}`}>
+                              {idx + 1}
+                            </div>
+                          )}
+                        </td>
+                        <td className="px-6 py-3">
+                          <div className="flex items-center gap-3">
+                            <img
+                              src={
+                                student.photoUrl ||
+                                `https://api.dicebear.com/7.x/initials/svg?seed=${student.candidateName}`
+                              }
+                              alt={student.candidateName}
+                              className="w-10 h-10 rounded-full border border-slate-200 shadow-sm object-cover shrink-0"
+                            />
+                            <div>
+                              <p className={`font-bold leading-tight ${isMe ? 'text-blue-800' : 'text-slate-800'}`}>
+                                {student.candidateName} {isMe && <span className="text-[10px] ml-1 bg-blue-100 text-blue-700 px-1.5 py-0.5 rounded uppercase font-bold tracking-wider">You</span>}
+                              </p>
+                              <p className="text-xs text-slate-500 font-mono tracking-wide">{student.serialNumber}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-3 text-center">
+                          <div className={`font-bold text-lg ${isMe ? 'text-blue-700' : 'text-slate-800'}`}>{student.score}</div>
+                          <div className="text-xs font-mono text-slate-500">{student.percentage}%</div>
+                        </td>
+                        <td className="px-6 py-3 text-center">
+                           <div className={`inline-flex px-2 py-0.5 rounded text-xs font-bold ${student.percentage >= 50 ? 'bg-green-50 text-green-700' : 'bg-red-50 text-red-700'}`}>
+                              {student.grade}
+                           </div>
+                        </td>
+                        <td className="px-6 py-3 text-right">
+                          <span className={`text-sm font-mono ${isMe ? 'text-blue-600' : 'text-slate-500'}`}>
+                            {student.durationMs > 0 ? (student.durationMs / 60000).toFixed(1) + ' min' : '—'}
+                          </span>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </CardContent>
+          </Card>
+        </div>
+      )}
     </div>
   );
 };
