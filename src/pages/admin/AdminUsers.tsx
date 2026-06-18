@@ -33,7 +33,82 @@ export default function AdminUsers() {
   };
 
   const handlePrint = () => {
-    window.print();
+    const printWindow = window.open('', '_blank');
+    if (!printWindow || !selectedUser) return;
+    
+    // Attempt to gather data
+    const analytics = getUserAnalytics(selectedUser.id);
+    const userResults = db.getResults().filter(r => r.candidateId === selectedUser.id);
+    const exams = db.getExams();
+
+    printWindow.document.write(`
+      <html>
+        <head>
+          <title>Candidate Report - ${selectedUser.name}</title>
+          <style>
+            body { font-family: sans-serif; padding: 20px; color: #333; }
+            h1 { color: #1e3a8a; border-bottom: 2px solid #1e3a8a; padding-bottom: 10px; }
+            .section { margin-bottom: 20px; }
+            .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+            .info-item { background: #f8fafc; padding: 10px; border-radius: 5px; }
+            .label { font-weight: bold; color: #64748b; font-size: 12px; text-transform: uppercase; }
+            .value { font-weight: bold; color: #0f172a; margin-top: 5px; }
+            table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+            th, td { padding: 10px; text-align: left; border-bottom: 1px solid #e2e8f0; }
+            th { background: #f1f5f9; }
+          </style>
+        </head>
+        <body>
+          <h1>Candidate Report: ${selectedUser.name}</h1>
+          <div class="section">
+            <h2>Registration Information</h2>
+            <div class="info-grid">
+              <div class="info-item"><div class="label">Candidate ID</div><div class="value">${selectedUser.serialNumber || 'N/A'}</div></div>
+              <div class="info-item"><div class="label">Email</div><div class="value">${selectedUser.email}</div></div>
+              <div class="info-item"><div class="label">Phone Number</div><div class="value">${selectedUser.phone || 'N/A'}</div></div>
+              <div class="info-item"><div class="label">State</div><div class="value">${selectedUser.state || 'N/A'}</div></div>
+              <div class="info-item"><div class="label">School</div><div class="value">${selectedUser.schoolName || 'N/A'}</div></div>
+              <div class="info-item"><div class="label">Registration Date</div><div class="value">${new Date(parseInt(selectedUser.id.split('_')[1] || Date.now().toString())).toLocaleDateString()}</div></div>
+              <div class="info-item"><div class="label">Payment Status</div><div class="value">${(selectedUser.paymentStatus || 'unknown').replace('_', ' ').toUpperCase()}</div></div>
+              <div class="info-item"><div class="label">Account Status</div><div class="value">${(selectedUser.accountStatus || 'active').toUpperCase()}</div></div>
+            </div>
+          </div>
+          <div class="section">
+            <h2>Quiz Status & Scores</h2>
+            <table>
+              <thead>
+                <tr>
+                  <th>Exam</th>
+                  <th>Score</th>
+                  <th>Percentage</th>
+                  <th>Status</th>
+                  <th>Date</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${userResults.length > 0 ? userResults.map(res => {
+                  const exam = exams.find(e => e.id === res.examId);
+                  const isPass = (res.percentage || 0) >= 50;
+                  return `
+                    <tr>
+                      <td>${exam?.title || res.examId}</td>
+                      <td>${res.score}</td>
+                      <td>${res.percentage}%</td>
+                      <td>${isPass ? 'Pass' : 'Fail'}</td>
+                      <td>${new Date(res.submittedAt || Date.now()).toLocaleDateString()}</td>
+                    </tr>
+                  `;
+                }).join('') : '<tr><td colspan="5">No quiz attempts yet.</td></tr>'}
+              </tbody>
+            </table>
+          </div>
+          <div class="section" style="margin-top: 40px; text-align: center;">
+             <button onclick="window.print()" style="padding: 10px 20px; background: #2563eb; color: white; border: none; border-radius: 5px; cursor: pointer; font-weight: bold;">Print / Save as PDF</button>
+          </div>
+        </body>
+      </html>
+    `);
+    printWindow.document.close();
   };
 
   const handleSuspend = () => {
@@ -52,12 +127,6 @@ export default function AdminUsers() {
     if (!selectedUser) return;
     if (window.confirm('This action cannot be undone. Delete candidate?')) {
       db.deleteUser(selectedUser.id);
-      
-      // Attempt to clean up related records
-      const results = db.getResults().filter(r => r.candidateId === selectedUser.id);
-      results.forEach(r => db.deleteDocument(`results/${r.id}`)); // Just mock delete for cleanup in store
-      // Note: Full cascading delete typically happens on backend or via robust store method.
-      
       toast.success('Candidate deleted successfully.');
       setSelectedUser(null);
     }

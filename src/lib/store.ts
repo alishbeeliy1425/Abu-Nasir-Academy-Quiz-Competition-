@@ -408,9 +408,14 @@ export const db = {
   },
 
   deleteUser(id: string) {
+    if (!localState.users) return;
     localState.users = localState.users.filter((u) => u.id !== id);
+    if (localState.results) {
+      localState.results = localState.results.filter(r => r.candidateId !== id);
+    }
     notify();
     supabase.from("users").delete().eq("id", id).then();
+    supabase.from("results").delete().eq("candidateId", id).then();
   },
 
   saveSubject(s: Subject) {
