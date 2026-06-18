@@ -49,14 +49,18 @@ export default function AdminSettings({ defaultTab = 'general' }: { defaultTab?:
   const handleImageUpload = (e: React.ChangeEvent<HTMLInputElement>, field: 'websiteLogo' | 'favicon' | 'dashboardLogo' | 'loginBackground') => {
     const file = e.target.files?.[0];
     if (file) {
+      if (file.size > 5 * 1024 * 1024) {
+        alert("File size must be less than 5MB");
+        return;
+      }
+      
       const reader = new FileReader();
       reader.onload = (event) => {
         const resultUrl = event.target?.result as string;
         
-        if (field !== 'loginBackground') {
-           // For logos and favicons, do not pass through canvas to preserve exact transparency and quality
+        // For SVGs, we can save them directly if they are small enough
+        if (file.type === 'image/svg+xml') {
            setSettings(prev => ({ ...prev, [field]: resultUrl }));
-           // For favicon specifically, we might want to update the document head
            if (field === 'favicon') {
              let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
              if (!link) {
@@ -66,37 +70,68 @@ export default function AdminSettings({ defaultTab = 'general' }: { defaultTab?:
              }
              link.href = resultUrl;
            }
-        } else {
-           // Resize background image to save storage
-           const img = new Image();
-           img.onload = () => {
-             const canvas = document.createElement('canvas');
-             let MAX_WIDTH = 1200;
-             let MAX_HEIGHT = 800;
-             let width = img.width;
-             let height = img.height;
-  
-             if (width > height) {
-               if (width > MAX_WIDTH) {
-                 height *= MAX_WIDTH / width;
-                 width = MAX_WIDTH;
-               }
-             } else {
-               if (height > MAX_HEIGHT) {
-                 width *= MAX_HEIGHT / height;
-                 height = MAX_HEIGHT;
-               }
-             }
-             canvas.width = width;
-             canvas.height = height;
-             const ctx = canvas.getContext('2d');
-             ctx?.drawImage(img, 0, 0, width, height);
-             
-             const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
-             setSettings(prev => ({ ...prev, [field]: dataUrl }));
-           };
-           img.src = resultUrl;
+           return;
         }
+
+        // Compress and resize raster images
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let MAX_WIDTH = 1200;
+          let MAX_HEIGHT = 800;
+          let mimeType = 'image/jpeg';
+          let quality = 0.8;
+
+          if (field === 'favicon') {
+            MAX_WIDTH = 128;
+            MAX_HEIGHT = 128;
+            mimeType = 'image/png';
+          } else if (field === 'websiteLogo' || field === 'dashboardLogo') {
+            MAX_WIDTH = 400;
+            MAX_HEIGHT = 400;
+            mimeType = 'image/png';
+          }
+
+          let width = img.width;
+          let height = img.height;
+
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          
+          // Only draw white bg for JPEGs
+          if (mimeType === 'image/jpeg') {
+              ctx!.fillStyle = '#FFFFFF';
+              ctx!.fillRect(0, 0, width, height);
+          }
+          
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const dataUrl = canvas.toDataURL(mimeType, quality);
+          setSettings(prev => ({ ...prev, [field]: dataUrl }));
+
+          if (field === 'favicon') {
+            let link = document.querySelector("link[rel~='icon']") as HTMLLinkElement;
+            if (!link) {
+              link = document.createElement('link');
+              link.rel = 'icon';
+              document.head.appendChild(link);
+            }
+            link.href = dataUrl;
+          }
+        };
+        img.src = resultUrl;
       };
       reader.readAsDataURL(file);
     }

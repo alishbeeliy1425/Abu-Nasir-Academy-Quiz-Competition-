@@ -652,7 +652,9 @@ export const db = {
       localChannel.postMessage({ type: 'SETTINGS_UPDATE', settings });
     }
     const dbObj = { ...settings, id: 1 };
-    supabase.from("settings").upsert(dbObj).then();
+    supabase.from("settings").upsert(dbObj).then(({ error }) => {
+      if (error) console.error("Error saving settings to Supabase:", error);
+    });
   },
   resetSettings() {
     localState.settings = defaultSettings;

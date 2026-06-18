@@ -53,6 +53,67 @@ const AdminHome = () => {
   const usersCount = useStore(state => (state.users || []).filter(u => u.role === 'candidate').length);
   const examsCount = useStore(state => (state.exams || []).filter(e => e.status === 'active').length);
   const questionsCount = useStore(state => (state.questions || []).length);
+  const forceSubmitSession = (session: any, exam: any) => {
+    // Calculate score
+    const qList = session.shuffledQuestions || [];
+    let score = 0;
+    qList.forEach((q: any) => {
+      if (session.answers?.[q.id] === q.correctAnswer) score++;
+    });
+
+    const total = Math.max(1, qList.length);
+    const percentage = Math.round((score / total) * 100);
+    const { grade, remarks } = db.computeGrade(percentage);
+
+    const result = {
+      id: `res_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      sessionId: session.id,
+      candidateId: session.candidateId,
+      examId: session.examId,
+      score: score * 10,
+      total: total * 10,
+      grade,
+      percentage,
+      remarks,
+      date: new Date().toISOString()
+    };
+
+    const updatedSession = { 
+      ...session, 
+      status: 'completed' as const, 
+      endTime: new Date().toISOString() 
+    };
+
+    db.saveSession(updatedSession);
+    db.saveResult(result as any);
+  };
+
+  useEffect(() => {
+    // Automatically sweep and submit expired sessions on load
+    const sessions = db.getSessions();
+    const examsObj = db.getExams();
+    const nowMs = Date.now();
+    let swept = 0;
+
+    sessions.forEach(session => {
+      if (session.status === 'in_progress') {
+        const exam = examsObj.find(e => e.id === session.examId);
+        if (exam) {
+           const startTimeMs = new Date(session.startTime).getTime();
+           const durationMs = exam.durationMinutes * 60 * 1000;
+           // If it's been more than duration + 1 min buffer, forcibly close and submit
+           if ((nowMs - startTimeMs) > (durationMs + 60000)) {
+               forceSubmitSession(session, exam);
+               swept++;
+           }
+        }
+      }
+    });
+    if (swept > 0) {
+      console.log(`Auto-completed ${swept} abandoned sessions.`);
+    }
+  }, []);
+
   const liveOnline = useStore(state => {
     const nowMs = Date.now();
     return (state.sessions || []).filter(session => {
@@ -61,25 +122,14 @@ const AdminHome = () => {
       if (!exam) return false;
       const startTimeMs = new Date(session.startTime).getTime();
       const durationMs = exam.durationMinutes * 60 * 1000;
-      const isExpired = (nowMs - startTimeMs) > (durationMs + 300000);
+      const isExpired = (nowMs - startTimeMs) > (durationMs + 60000);
       return !isExpired;
     }).length || 0;
   });
 
   const submitted = useStore(state => {
-    const nowMs = Date.now();
-    return (state.sessions || []).filter(session => {
-      if (session.status === 'completed') return true;
-      if (session.status === 'in_progress') {
-        const exam = state.exams?.find(e => e.id === session.examId);
-        if (exam) {
-          const startTimeMs = new Date(session.startTime).getTime();
-          const durationMs = exam.durationMinutes * 60 * 1000;
-          return (nowMs - startTimeMs) > (durationMs + 300000); // abandoned treated as submitted/finished
-        }
-      }
-      return false;
-    }).length || 0;
+    // Just count completed sessions, abandoned ones will be auto-completed now
+    return (state.sessions || []).filter(session => session.status === 'completed').length || 0;
   });
 
   const stats = {

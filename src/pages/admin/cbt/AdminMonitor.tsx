@@ -88,8 +88,8 @@ export default function AdminMonitor() {
     const startTimeMs = new Date(session.startTime).getTime();
     const durationMs = exam.durationMinutes * 60 * 1000;
     
-    // Check if the session is abandoned (running past duration + 5 min buffer)
-    const isExpired = (now - startTimeMs) > (durationMs + 300000);
+    // Check if the session is abandoned (running past duration + 1 min buffer)
+    const isExpired = (now - startTimeMs) > (durationMs + 60000);
     return !isExpired;
   });
 

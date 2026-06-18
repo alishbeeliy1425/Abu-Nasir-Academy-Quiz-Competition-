@@ -51,7 +51,7 @@ const CandidateExams = () => {
           if (session && session.status === 'in_progress' && session.startTime) {
             isInProgress = true;
             const elapsed = Date.now() - new Date(session.startTime).getTime();
-            if (elapsed > (exam.durationMinutes * 60 * 1000)) {
+            if (elapsed > (exam.durationMinutes * 60 * 1000) + 60000) {
               isExpired = true;
             }
           }
