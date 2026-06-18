@@ -763,7 +763,7 @@ const CandidateProfile = () => {
       <Card className="shadow-sm border-0 ring-1 ring-slate-200 bg-white">
         <CardContent className="p-8">
            <div className="flex flex-col md:flex-row gap-8 items-start">
-              <img src={user?.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`} className="w-32 h-32 rounded-full border-4 border-slate-100 object-cover shadow-sm bg-white" alt="Profile" />
+              <img src={user?.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${user?.name}`} className="w-32 h-32 rounded-full border-4 border-slate-100 object-cover shadow-sm bg-white" alt="Profile" loading="lazy" />
               <div className="flex-1 space-y-4 w-full">
                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>

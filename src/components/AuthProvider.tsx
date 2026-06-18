@@ -43,7 +43,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const { syncFromSupabase } = await import("../lib/store");
           await Promise.race([
-            syncFromSupabase(),
+            syncFromSupabase(false, savedUserId, null),
             new Promise((_, reject) =>
               setTimeout(() => reject(new Error("Sync timeout")), 3000),
             ),

@@ -29,11 +29,28 @@ const AdminDashboard = React.lazy(() => import("./pages/admin/Dashboard"));
 const StaffDash = () => <div className="p-8">Staff Dashboard (WIP)</div>;
 
 const LoadingFallback = () => (
-  <div className="flex bg-slate-50 min-h-screen items-center justify-center flex-col space-y-4">
-    <div className="w-12 h-12 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin"></div>
-    <p className="text-slate-500 font-medium animate-pulse">
-      Loading experience...
-    </p>
+  <div className="flex bg-slate-50 min-h-screen p-8 flex-col space-y-6">
+    <div className="flex items-center space-x-4 mb-4">
+       <div className="w-12 h-12 bg-slate-200 rounded-full animate-pulse"></div>
+       <div className="space-y-2">
+          <div className="w-48 h-4 bg-slate-200 rounded animate-pulse"></div>
+          <div className="w-32 h-3 bg-slate-200 rounded animate-pulse"></div>
+       </div>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+       <div className="col-span-2 space-y-4">
+          <div className="w-full h-64 bg-slate-200/50 rounded-xl animate-pulse"></div>
+          <div className="w-full h-32 bg-slate-200/50 rounded-xl animate-pulse"></div>
+       </div>
+       <div className="space-y-4">
+          <div className="w-full h-40 bg-slate-200/50 rounded-xl animate-pulse"></div>
+          <div className="w-full h-40 bg-slate-200/50 rounded-xl animate-pulse"></div>
+       </div>
+    </div>
+    <div className="text-center mt-10">
+       <div className="w-8 h-8 border-4 border-blue-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-2"></div>
+       <p className="text-slate-500 font-medium animate-pulse text-sm">Loading modules...</p>
+    </div>
   </div>
 );
 

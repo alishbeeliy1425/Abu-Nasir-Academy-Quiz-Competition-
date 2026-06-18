@@ -140,76 +140,94 @@ let hasSubscribed = false;
 let syncPromise: Promise<void> | null = null;
 
 // Sync from supabase!
-export const syncFromSupabase = async (force = false) => {
-  if (isSynced && !force) return syncPromise;
+export const syncFromSupabase = async (force = false, userId?: string | null, role?: string | null) => {
+  if (isSynced && !force && !userId) return syncPromise;
   isSynced = true;
 
   syncPromise = (async () => {
     try {
-      const [
-        usersRes,
-        subjectsRes,
-        questionsRes,
-        examsRes,
-        sessionsRes,
-        resultsRes,
-        attRes,
-        settingsRes,
-        violationsRes,
-        documentsRes,
-      ] = await Promise.all([
-        supabase.from("users").select("*"),
-        supabase.from("subjects").select("*"),
-        supabase.from("questions").select("*"),
-        supabase.from("exams").select("*"),
-        supabase.from("exam_sessions").select("*"),
-        supabase.from("results").select("*"),
-        supabase.from("attendance").select("*"),
-        supabase.from("settings").select("*").eq("id", 1).single(),
-        supabase.from("violations").select("*"),
-        supabase.from("documents").select("*"),
-      ]);
-
-      if (usersRes.error) console.error("fetch users error:", usersRes.error);
-      if (usersRes.data && usersRes.data.length > 0)
-        localState.users = usersRes.data;
-
-      if (subjectsRes.error)
-        console.error("fetch subjects error:", subjectsRes.error);
-      if (subjectsRes.data) localState.subjects = subjectsRes.data;
-
-      if (questionsRes.error)
-        console.error("fetch questions error:", questionsRes.error);
-      if (questionsRes.data) localState.questions = questionsRes.data;
-
-      if (examsRes.error) console.error("fetch exams error:", examsRes.error);
-      if (examsRes.data) localState.exams = examsRes.data;
-
-      if (sessionsRes.error)
-        console.error("fetch sessions error:", sessionsRes.error);
-      if (sessionsRes.data) localState.sessions = sessionsRes.data;
-
-      if (resultsRes.error)
-        console.error("fetch results error:", resultsRes.error);
-      if (resultsRes.data) localState.results = resultsRes.data;
-
-      if (attRes.error) console.error("fetch attendance error:", attRes.error);
-      if (attRes.data) localState.attendance = attRes.data;
-
-      if (violationsRes.error)
-        console.error("fetch violations error:", violationsRes.error);
-      if (violationsRes.data) localState.violations = violationsRes.data;
-
-      if (documentsRes.error)
-        console.error("fetch documents error:", documentsRes.error);
-      if (documentsRes.data) localState.documents = documentsRes.data;
-
-      if (settingsRes.error)
-        console.error("fetch settings error:", settingsRes.error);
-      if (settingsRes.data)
+      // Step 1: Base settings
+      const settingsRes = await supabase.from("settings").select("*").eq("id", 1).single();
+      if (settingsRes.data) {
         localState.settings = { ...defaultSettings, ...settingsRes.data };
+      }
 
-      notify();
+      // Step 2: Try to get user context if provided, but not role
+      if (userId && !role) {
+         try {
+           const userRes = await supabase.from("users").select("*").eq("id", userId).single();
+           if (userRes.data) {
+              role = userRes.data.role;
+              // Make sure user is in cache
+              localState.users = [userRes.data];
+           }
+         } catch(e) {}
+      }
+
+      const isCandidate = role === 'candidate';
+      const isPublicUrl = window.location.pathname === '/' || window.location.pathname.startsWith('/login');
+
+      // Step 3: Define what to fetch based on auth
+      const basicPromises = [
+        supabase.from("subjects").select("*"),
+        supabase.from("exams").select("*"),
+        supabase.from("exam_sessions").select("*")
+      ];
+
+      let [
+        subjectsRes,
+        examsRes,
+        sessionsRes
+      ] = await Promise.all(basicPromises);
+
+      if (subjectsRes?.data) localState.subjects = subjectsRes.data;
+      if (examsRes?.data) localState.exams = examsRes.data;
+      if (sessionsRes?.data) localState.sessions = sessionsRes.data;
+
+      // Fetch questions only if needed
+      if (!isPublicUrl) {
+         const qRes = await supabase.from("questions").select("*");
+         if (qRes.data) localState.questions = qRes.data;
+      }
+
+      // Admin or full fetch needed
+      if (!isCandidate) {
+        const [
+           usersRes,
+           resultsRes,
+           attRes,
+           violationsRes,
+           documentsRes,
+        ] = await Promise.all([
+          supabase.from("users").select("*"), 
+          supabase.from("results").select("*"), 
+          supabase.from("attendance").select("*"),
+          supabase.from("violations").select("*"),
+          supabase.from("documents").select("*"), 
+        ]);
+        
+        if (usersRes?.data && usersRes.data.length > 0) {
+           // Merge current detailed user if any
+           let fetchedUsers = usersRes.data as any[];
+           if (userId) {
+              const cu = localState.users.find(u => u.id === userId);
+              if (cu && !fetchedUsers.find(u => u.id === cu.id)) {
+                 fetchedUsers.push(cu);
+              }
+           }
+           localState.users = fetchedUsers;
+        }
+        if (resultsRes?.data) localState.results = resultsRes.data;
+        if (attRes?.data) localState.attendance = attRes.data;
+        if (violationsRes?.data) localState.violations = violationsRes.data;
+        if (documentsRes?.data) localState.documents = documentsRes.data;
+      } else if (userId) {
+         // Candidate specific limits
+         const res = await supabase.from("results").select("*").eq("candidateId", userId);
+         if (res.data) localState.results = res.data;
+      }
+
+      debouncedNotify();
 
       if (!hasSubscribed) {
         hasSubscribed = true;
