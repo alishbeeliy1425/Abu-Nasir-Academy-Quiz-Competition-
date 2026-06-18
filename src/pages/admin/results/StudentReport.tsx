@@ -11,8 +11,10 @@ export default function StudentReport() {
   const results = useStore(state => state.results || []);
   const exams = useStore(state => state.exams || []);
   const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [viewingSlip, setViewingSlip] = useState<Result | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+  const [viewingSlipId, setViewingSlipId] = useState<string | null>(null);
+  const selectedUser = selectedUserId ? users.find(u => u.id === selectedUserId) || null : null;
+  const viewingSlip = viewingSlipId ? results.find(r => r.id === viewingSlipId) || null : null;
 
   const filteredUsers = users.filter(u => 
     u.name.toLowerCase().includes(search.toLowerCase()) || 
@@ -91,7 +93,7 @@ export default function StudentReport() {
     return (
       <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
         <div className="flex justify-between items-center no-print">
-          <Button variant="outline" onClick={() => setSelectedUser(null)}>Back to Search</Button>
+          <Button variant="outline" onClick={() => setSelectedUserId(null)}>Back to Search</Button>
           <div className="flex gap-2">
             <Button variant="outline" className="text-blue-600 bg-white" onClick={handlePrintReport}><Printer className="w-4 h-4 mr-2"/> Print Full Report</Button>
             <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handlePrintReport}><Download className="w-4 h-4 mr-2"/> Export PDF</Button>
@@ -164,7 +166,7 @@ export default function StudentReport() {
                                 Grade: {res.grade}
                               </p>
                             </div>
-                            <Button variant="outline" size="sm" className="bg-white no-print" onClick={() => setViewingSlip(res)}>View Slip</Button>
+                            <Button variant="outline" size="sm" className="bg-white no-print" onClick={() => setViewingSlipId(res.id)}>View Slip</Button>
                           </div>
                         </div>
                       )
@@ -182,7 +184,7 @@ export default function StudentReport() {
             <Card className="w-full max-w-2xl bg-white shadow-2xl animate-in zoom-in-95 duration-200">
               <div className="p-4 border-b border-slate-100 flex justify-between items-center bg-slate-50/50">
                 <h3 className="font-bold text-slate-800">Result Slip</h3>
-                <Button variant="ghost" size="sm" onClick={() => setViewingSlip(null)} className="h-9 w-9 p-0">
+                <Button variant="ghost" size="sm" onClick={() => setViewingSlipId(null)} className="h-9 w-9 p-0">
                   <X className="w-5 h-5 text-slate-500" />
                 </Button>
               </div>
@@ -244,7 +246,7 @@ export default function StudentReport() {
                 </div>
               </div>
               <div className="p-4 border-t border-slate-100 flex justify-end gap-2 bg-slate-50/50">
-                <Button variant="outline" onClick={() => setViewingSlip(null)}>Close</Button>
+                <Button variant="outline" onClick={() => setViewingSlipId(null)}>Close</Button>
                 <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={handlePrintSlip}>
                   <Printer className="w-4 h-4 mr-2" /> Print PDF
                 </Button>
@@ -288,7 +290,7 @@ export default function StudentReport() {
               </li>
             ) : (
               filteredUsers.slice(0, 50).map(u => (
-                <li key={u.id} className="p-4 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors" onClick={() => setSelectedUser(u)}>
+                <li key={u.id} className="p-4 flex items-center justify-between hover:bg-slate-50/80 cursor-pointer transition-colors" onClick={() => setSelectedUserId(u.id)}>
                   <div className="flex items-center gap-4">
                     <div className="w-12 h-12 rounded-full overflow-hidden border-2 border-slate-200 bg-slate-100 shadow-sm">
                       <img src={u.photoUrl || `https://api.dicebear.com/7.x/initials/svg?seed=${u.name}`} alt="Candidate" className="w-full h-full object-cover" />

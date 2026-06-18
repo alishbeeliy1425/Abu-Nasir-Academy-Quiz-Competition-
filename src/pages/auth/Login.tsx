@@ -7,6 +7,7 @@ import { Input } from '../../components/ui/input';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { useAuth } from '../../components/AuthProvider';
 import { useSettings } from '../../components/SettingsProvider';
+import { db } from '../../lib/store';
 
 export default function Login() {
   const [searchParams] = useSearchParams();

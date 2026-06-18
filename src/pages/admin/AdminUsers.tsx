@@ -10,7 +10,9 @@ export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState('candidate');
   const users = useStore(state => state.users || []);
   const [search, setSearch] = useState('');
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
+
+  const selectedUser = selectedUserId ? users.find(u => u.id === selectedUserId) || null : null;
 
   const getFilteredUsers = (role: string) => {
     return users.filter(u => 
@@ -95,7 +97,7 @@ export default function AdminUsers() {
                       <td>${res.score}</td>
                       <td>${res.percentage}%</td>
                       <td>${isPass ? 'Pass' : 'Fail'}</td>
-                      <td>${new Date(res.submittedAt || Date.now()).toLocaleDateString()}</td>
+                      <td>${new Date(res.date || Date.now()).toLocaleDateString()}</td>
                     </tr>
                   `;
                 }).join('') : '<tr><td colspan="5">No quiz attempts yet.</td></tr>'}
@@ -118,7 +120,6 @@ export default function AdminUsers() {
      if (window.confirm(`Are you sure you want to ${action} this candidate?`)) {
         const updatedUser = { ...selectedUser, accountStatus: isSuspended ? 'active' : 'suspended' } as User;
         db.addUser(updatedUser);
-        setSelectedUser(updatedUser);
         toast.success(`Candidate successfully ${isSuspended ? 'reactivated' : 'suspended'}.`);
      }
   };
@@ -128,7 +129,7 @@ export default function AdminUsers() {
     if (window.confirm('This action cannot be undone. Delete candidate?')) {
       db.deleteUser(selectedUser.id);
       toast.success('Candidate deleted successfully.');
-      setSelectedUser(null);
+      setSelectedUserId(null);
     }
   };
 
@@ -175,7 +176,7 @@ export default function AdminUsers() {
     return (
       <div className="space-y-6 animate-in slide-in-from-right-8 duration-300">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 no-print">
-          <Button variant="ghost" onClick={() => setSelectedUser(null)} className="hover:bg-slate-200">
+          <Button variant="ghost" onClick={() => setSelectedUserId(null)} className="hover:bg-slate-200">
             <ArrowLeft className="w-4 h-4 mr-2" /> Back to Users
           </Button>
           <div className="flex gap-2">
@@ -193,7 +194,6 @@ export default function AdminUsers() {
               if (newName !== null && newName.trim() !== "") {
                  const updatedUser = { ...selectedUser, name: newName.trim() } as User;
                  db.addUser(updatedUser);
-                 setSelectedUser(updatedUser);
                  toast.success("Profile updated successfully.");
               }
             }}>
@@ -411,7 +411,7 @@ export default function AdminUsers() {
                     </td>
                     <td className="p-4 text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button variant="outline" size="sm" className="h-8 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border-blue-200 font-semibold" onClick={() => setSelectedUser(u)}>
+                        <Button variant="outline" size="sm" className="h-8 bg-blue-50 text-blue-700 hover:bg-blue-100 hover:text-blue-800 border-blue-200 font-semibold" onClick={() => setSelectedUserId(u.id)}>
                           <Eye className="w-4 h-4 mr-1.5" /> Full Details
                         </Button>
                       </div>

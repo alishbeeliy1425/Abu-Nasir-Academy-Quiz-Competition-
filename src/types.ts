@@ -88,6 +88,7 @@ export interface Result {
   grade: string;
   percentage?: number;
   remarks?: string;
+  submittedAt?: string;
   date: string;
 }
 
