@@ -45,6 +45,16 @@ const CandidateExams = () => {
           const hasTaken = userResultsMap.has(exam.id);
           const session = userSessionsMap.get(exam.id);
           const isCompleted = hasTaken || (session && session.status === "completed");
+          
+          let isExpired = false;
+          let isInProgress = false;
+          if (session && session.status === 'in_progress' && session.startTime) {
+            isInProgress = true;
+            const elapsed = Date.now() - new Date(session.startTime).getTime();
+            if (elapsed > (exam.durationMinutes * 60 * 1000)) {
+              isExpired = true;
+            }
+          }
 
           let isScheduled = false;
           let timeToStart = 0;
@@ -213,7 +223,7 @@ const CandidateExams = () => {
                     onClick={() => navigate(`/candidate/take-exam/${exam.id}`)}
                     className="w-full bg-blue-600 hover:bg-blue-700 text-white shadow-sm font-medium tracking-wide"
                   >
-                    START EXAM
+                    {isExpired ? 'FINALIZE SUBMISSION' : isInProgress ? 'RESUME EXAM' : 'START EXAM'}
                   </Button>
                 )}
               </CardContent>

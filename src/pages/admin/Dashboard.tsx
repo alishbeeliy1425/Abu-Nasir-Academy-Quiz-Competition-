@@ -5,7 +5,7 @@ import { motion } from 'motion/react';
 import { 
   Home, Users, BookOpen, Settings, BarChart2, CalendarCheck, 
   Monitor, FileSpreadsheet, Folder, PieChart, Shield, Download,
-  UserPlus
+  UserPlus, Award
 } from 'lucide-react';
 import { DashboardLayout, NavItem } from '../../components/layout/DashboardLayout';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
@@ -53,8 +53,34 @@ const AdminHome = () => {
   const usersCount = useStore(state => (state.users || []).filter(u => u.role === 'candidate').length);
   const examsCount = useStore(state => (state.exams || []).filter(e => e.status === 'active').length);
   const questionsCount = useStore(state => (state.questions || []).length);
-  const liveOnline = useStore(state => (state.sessions || []).filter(s => s.status === 'in_progress').length || 0);
-  const submitted = useStore(state => (state.sessions || []).filter(s => s.status === 'completed').length || 0);
+  const liveOnline = useStore(state => {
+    const nowMs = Date.now();
+    return (state.sessions || []).filter(session => {
+      if (session.status !== 'in_progress') return false;
+      const exam = state.exams?.find(e => e.id === session.examId);
+      if (!exam) return false;
+      const startTimeMs = new Date(session.startTime).getTime();
+      const durationMs = exam.durationMinutes * 60 * 1000;
+      const isExpired = (nowMs - startTimeMs) > (durationMs + 300000);
+      return !isExpired;
+    }).length || 0;
+  });
+
+  const submitted = useStore(state => {
+    const nowMs = Date.now();
+    return (state.sessions || []).filter(session => {
+      if (session.status === 'completed') return true;
+      if (session.status === 'in_progress') {
+        const exam = state.exams?.find(e => e.id === session.examId);
+        if (exam) {
+          const startTimeMs = new Date(session.startTime).getTime();
+          const durationMs = exam.durationMinutes * 60 * 1000;
+          return (nowMs - startTimeMs) > (durationMs + 300000); // abandoned treated as submitted/finished
+        }
+      }
+      return false;
+    }).length || 0;
+  });
 
   const stats = {
     users: usersCount,

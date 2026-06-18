@@ -80,7 +80,18 @@ export default function AdminMonitor() {
   }, [activeTab]);
 
 
-  const activeSessions = sessions.filter(s => s.status === 'in_progress');
+  const activeSessions = sessions.filter(session => {
+    if (session.status !== 'in_progress') return false;
+    const exam = exams.find(e => e.id === session.examId);
+    if (!exam) return false;
+    
+    const startTimeMs = new Date(session.startTime).getTime();
+    const durationMs = exam.durationMinutes * 60 * 1000;
+    
+    // Check if the session is abandoned (running past duration + 5 min buffer)
+    const isExpired = (now - startTimeMs) > (durationMs + 300000);
+    return !isExpired;
+  });
 
   return (
     <div className="space-y-6">

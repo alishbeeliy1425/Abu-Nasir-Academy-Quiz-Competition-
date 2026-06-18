@@ -63,12 +63,15 @@ export default function ExamInterface() {
     
     let existingSession = db.getSessions().find(s => s.examId === examId && s.candidateId === user?.id && s.status === 'in_progress');
     let sessionQuestions: Question[] = [];
+    let initialTimeLeft = exam.durationMinutes * 60;
 
     if (existingSession && existingSession.shuffledQuestions && existingSession.shuffledQuestions.length > 0) {
       sessionQuestions = existingSession.shuffledQuestions;
       if (existingSession.answers) {
         setAnswers(existingSession.answers);
       }
+      const elapsedSeconds = Math.floor((Date.now() - new Date(existingSession.startTime).getTime()) / 1000);
+      initialTimeLeft = Math.max(0, (exam.durationMinutes * 60) - elapsedSeconds);
     } else {
       sessionQuestions = db.generateShuffledQuestions(examId);
       if (sessionQuestions.length === 0) {
@@ -90,7 +93,7 @@ export default function ExamInterface() {
     }
     
     setQuestions(sessionQuestions);
-    setTimeLeft(exam.durationMinutes * 60);
+    setTimeLeft(initialTimeLeft);
 
     // Instead of auto-starting, remain in init state (hasReadInstructions = false)
     setExamStarted(true); // Technically questions are ready, but we use hasReadInstructions to gate the UI.
