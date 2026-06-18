@@ -139,7 +139,7 @@ export default function Register() {
             <CardHeader className="text-center pt-8 pb-4 border-b border-slate-100 bg-white rounded-t-xl">
               {settings.websiteLogo ? (
                 <div className="mx-auto mb-4 pb-2">
-                  <img src={settings.websiteLogo} alt="Logo" className="mx-auto h-20 object-contain drop-shadow-sm" />
+                  <img src={settings.websiteLogo} alt="Logo" className="mx-auto h-20 object-contain drop-shadow-sm" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }} />
                 </div>
               ) : (
                 <div className="mx-auto bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mb-4 shadow-inner">

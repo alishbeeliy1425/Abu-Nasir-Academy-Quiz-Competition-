@@ -1,9 +1,10 @@
 import React, { useState } from 'react';
 import { Card, CardContent, CardHeader } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
-import { Download, UserPlus, Search, Edit, Trash2, MoreVertical, Eye, ArrowLeft, Printer, ShieldAlert, BarChart3, Clock, BookOpen, GraduationCap } from 'lucide-react';
+import { Download, UserPlus, Search, Edit, Trash2, MoreVertical, Eye, ArrowLeft, Printer, ShieldAlert, ShieldCheck, BarChart3, Clock, BookOpen, GraduationCap } from 'lucide-react';
 import { db, useStore } from '../../lib/store';
 import { User } from '../../types';
+import { toast } from 'sonner';
 
 export default function AdminUsers() {
   const [activeTab, setActiveTab] = useState('candidate');
@@ -35,10 +36,69 @@ export default function AdminUsers() {
     window.print();
   };
 
+  const handleSuspend = () => {
+     if (!selectedUser) return;
+     const isSuspended = selectedUser.accountStatus === 'suspended';
+     const action = isSuspended ? 'reactivate' : 'suspend';
+     if (window.confirm(`Are you sure you want to ${action} this candidate?`)) {
+        const updatedUser = { ...selectedUser, accountStatus: isSuspended ? 'active' : 'suspended' } as User;
+        db.addUser(updatedUser);
+        setSelectedUser(updatedUser);
+        toast.success(`Candidate successfully ${isSuspended ? 'reactivated' : 'suspended'}.`);
+     }
+  };
+
+  const handleDelete = () => {
+    if (!selectedUser) return;
+    if (window.confirm('This action cannot be undone. Delete candidate?')) {
+      db.deleteUser(selectedUser.id);
+      
+      // Attempt to clean up related records
+      const results = db.getResults().filter(r => r.candidateId === selectedUser.id);
+      results.forEach(r => db.deleteDocument(`results/${r.id}`)); // Just mock delete for cleanup in store
+      // Note: Full cascading delete typically happens on backend or via robust store method.
+      
+      toast.success('Candidate deleted successfully.');
+      setSelectedUser(null);
+    }
+  };
+
   const tabs = [
     { id: 'candidate', label: 'Candidates' },
     { id: 'admin', label: 'Admins' },
   ];
+
+  const exportAsCSV = () => {
+    const dataToExport = getFilteredUsers(activeTab).map(u => ({
+       'Serial No': u.serialNumber || '',
+       'Name': u.name,
+       'Email': u.email,
+       'Phone': u.phone || '',
+       'School': u.schoolName || '',
+       'State': u.state || '',
+       'Payment Status': u.paymentStatus || '',
+       'Account Status': u.accountStatus || 'active'
+    }));
+    
+    if (dataToExport.length === 0) {
+       toast.error("No candidates to export.");
+       return;
+    }
+    
+    const headers = Object.keys(dataToExport[0]).join(',');
+    const csvContent = [
+      headers,
+      ...dataToExport.map(row => Object.values(row).map(val => `"${String(val).replace(/"/g, '""')}"`).join(','))
+    ].join('\n');
+    
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `${activeTab}_candidates_export.csv`;
+    link.click();
+    URL.revokeObjectURL(url);
+  };
 
   if (selectedUser) {
     const analytics = getUserAnalytics(selectedUser.id);
@@ -53,18 +113,21 @@ export default function AdminUsers() {
             <Button variant="outline" className="text-blue-600 border-blue-200 hover:bg-blue-50" onClick={handlePrint}>
               <Printer className="w-4 h-4 mr-2" /> Print Report
             </Button>
-            <Button variant="outline" className="text-amber-600 border-amber-200 hover:bg-amber-50">
-              <ShieldAlert className="w-4 h-4 mr-2" /> Suspend
+            <Button variant="outline" className={selectedUser.accountStatus === 'suspended' ? "text-green-600 border-green-200 hover:bg-green-50" : "text-amber-600 border-amber-200 hover:bg-amber-50"} onClick={handleSuspend}>
+              {selectedUser.accountStatus === 'suspended' ? <><ShieldCheck className="w-4 h-4 mr-2" /> Reactivate</> : <><ShieldAlert className="w-4 h-4 mr-2" /> Suspend</>}
             </Button>
-            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => {
-              if (window.confirm('Delete this account permanently?')) {
-                db.deleteUser(selectedUser.id);
-                setSelectedUser(null);
-              }
-            }}>
+            <Button variant="outline" className="text-red-600 border-red-200 hover:bg-red-50" onClick={handleDelete}>
               <Trash2 className="w-4 h-4 mr-2" /> Delete
             </Button>
-            <Button className="bg-blue-600 hover:bg-blue-700 text-white">
+            <Button className="bg-blue-600 hover:bg-blue-700 text-white" onClick={() => {
+              const newName = window.prompt("Enter new name:", selectedUser.name);
+              if (newName !== null && newName.trim() !== "") {
+                 const updatedUser = { ...selectedUser, name: newName.trim() } as User;
+                 db.addUser(updatedUser);
+                 setSelectedUser(updatedUser);
+                 toast.success("Profile updated successfully.");
+              }
+            }}>
               <Edit className="w-4 h-4 mr-2" /> Edit Profile
             </Button>
           </div>
@@ -83,14 +146,18 @@ export default function AdminUsers() {
               <CardContent className="pt-16 pb-6 px-6">
                  <h2 className="text-2xl font-bold text-slate-800">{selectedUser.name}</h2>
                  <p className="text-blue-600 font-mono font-semibold tracking-wide text-sm mt-1">{selectedUser.serialNumber || 'No Serial'}</p>
-                 <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-green-50 text-green-700 border border-green-100 mt-4">
-                    <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span> Active Candidate
+                 <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold mt-4 border ${selectedUser.accountStatus === 'suspended' ? 'bg-red-50 text-red-700 border-red-100' : 'bg-green-50 text-green-700 border-green-100'}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${selectedUser.accountStatus === 'suspended' ? 'bg-red-500' : 'bg-green-500'}`}></span> {selectedUser.accountStatus === 'suspended' ? 'Suspended Candidate' : 'Active Candidate'}
                  </span>
                  
                  <div className="mt-8 space-y-4">
                    <div>
                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Registration Date</p>
                      <p className="text-slate-700 font-medium">{new Date(parseInt(selectedUser.id.split('_')[1] || Date.now().toString())).toLocaleDateString()}</p>
+                   </div>
+                   <div>
+                     <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Payment Status</p>
+                     <p className="text-slate-700 uppercase font-bold text-sm">{(selectedUser.paymentStatus || 'unknown').replace('_', ' ')}</p>
                    </div>
                    <div>
                      <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-1">Email</p>
@@ -197,7 +264,7 @@ export default function AdminUsers() {
           <p className="text-sm text-slate-500 mt-1">Manage registrants, view full details, and monitor records.</p>
         </div>
         <div className="flex gap-2">
-          <Button variant="outline" className="bg-white"><Download className="w-4 h-4 mr-2"/> Export CSV</Button>
+          <Button variant="outline" className="bg-white" onClick={exportAsCSV}><Download className="w-4 h-4 mr-2"/> Export CSV</Button>
         </div>
       </div>
       

@@ -92,6 +92,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const login = async (email: string) => {
     const foundUser = db.login(email);
     if (foundUser && foundUser.role !== "admin") {
+      if (foundUser.accountStatus === 'suspended') {
+         return false;
+      }
       setUser(foundUser);
       try {
         localStorage.setItem("abunasir_auth_id", foundUser.id);

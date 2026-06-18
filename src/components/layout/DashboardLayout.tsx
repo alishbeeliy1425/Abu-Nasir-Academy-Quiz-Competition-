@@ -58,9 +58,9 @@ export function DashboardLayout({ children, navigation }: { children: React.Reac
         <div className="h-16 flex items-center justify-between px-5 border-b border-white/10 shrink-0 bg-[#161d31]">
           <span className="text-xl font-bold tracking-tight text-white flex items-center gap-3">
             {settings.dashboardLogo ? (
-              <img src={settings.dashboardLogo} alt="Logo" className="h-10 object-contain" />
+              <img src={settings.dashboardLogo} alt="Logo" className="h-10 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }} />
             ) : settings.websiteLogo ? (
-              <img src={settings.websiteLogo} alt="Logo" className="h-10 object-contain" />
+              <img src={settings.websiteLogo} alt="Logo" className="h-10 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }} />
             ) : (
               <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center text-sm shadow-inner overflow-hidden border border-blue-500">
                  <span className="text-white font-extrabold font-serif">{settings.websiteName ? settings.websiteName.charAt(0) : 'A'}</span>

@@ -27,7 +27,7 @@ export default function Welcome() {
       <nav className="h-16 px-4 md:px-8 border-b border-white/10 flex items-center justify-between shrink-0 z-10 relative">
         <div className="flex items-center gap-2">
           {settings.websiteLogo ? (
-            <img src={settings.websiteLogo} alt="Logo" className="w-8 h-8 object-contain" />
+            <img src={settings.websiteLogo} alt="Logo" className="w-8 h-8 object-contain" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }} />
           ) : (
             <BookOpen className="w-5 h-5 text-blue-500" />
           )}

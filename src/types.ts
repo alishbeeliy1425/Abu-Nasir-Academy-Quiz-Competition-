@@ -18,6 +18,7 @@ export interface User {
   amountPaid?: number;
   paymentDate?: string;
   competitionCategory?: string;
+  accountStatus?: 'active' | 'suspended';
 }
 
 export interface Subject {

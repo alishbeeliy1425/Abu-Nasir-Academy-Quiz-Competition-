@@ -40,7 +40,16 @@ export default function Login() {
       return;
     }
 
+    const foundUser = db.login(email);
+    if (foundUser?.accountStatus === 'suspended') {
+      setError('Your account has been suspended. Please contact support.');
+      setIsLoading(false);
+      return;
+    }
+
     const success = await login(email);
+    
+    // Check account status after successful login attempt logic to prevent suspended users
     if (success) {
       if (role === 'staff') navigate('/staff');
       else navigate('/candidate');
@@ -68,7 +77,7 @@ export default function Login() {
             <CardHeader className="text-center pt-8 pb-4">
               <div className="mx-auto flex flex-col items-center justify-center mb-2">
                 {settings.websiteLogo ? (
-                  <img src={settings.websiteLogo} alt="Logo" className="h-16 object-contain mb-4" />
+                  <img src={settings.websiteLogo} alt="Logo" className="h-16 object-contain mb-4" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.style.display = 'none'; }} />
                 ) : (
                   <div className="bg-blue-100 w-16 h-16 rounded-full flex items-center justify-center mb-4">
                     <GraduationCap className={`h-8 w-8 ${role === 'candidate' ? 'text-blue-600' : role === 'staff' ? 'text-orange-600' : 'text-purple-600'}`} />

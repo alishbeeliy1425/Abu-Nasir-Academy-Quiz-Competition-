@@ -17,7 +17,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     darkMode: false,
     antiCheatingEnabled: true,
     gradingStyle: 'waec',
-    customGrades: []
+    customGrades: [],
+    websiteLogo: "https://i.ibb.co/d4cb3x7L/7588cd41-3c15-4541-82b2-54ec771af0dc-removebg-preview.png",
+    dashboardLogo: "https://i.ibb.co/d4cb3x7L/7588cd41-3c15-4541-82b2-54ec771af0dc-removebg-preview.png",
+    favicon: "https://i.ibb.co/d4cb3x7L/7588cd41-3c15-4541-82b2-54ec771af0dc-removebg-preview.png",
   };
 
   useEffect(() => {
